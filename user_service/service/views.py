@@ -19,6 +19,8 @@ class NewUserView(View):
         if form.is_valid():
             form.save()
             return HttpResponseRedirect('/user/{}/'.format(form.cleaned_data['login']))
+        else:
+            raise Exception(form.errors)
 
 
 class UserView(View):
