@@ -18,9 +18,11 @@ class NewUserView(View):
         form = UserForm(request.POST)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect('/user/{}/'.format(form.cleaned_data['login']))
+            # return HttpResponseRedirect('/user/{}/'.format(form.cleaned_data['login']))
+            return HttpResponse('', status=201)
         else:
-            raise Exception(form.errors)
+            # raise Exception(form.errors)
+            return HttpResponse('', status=409)
 
 
 class UserView(View):
