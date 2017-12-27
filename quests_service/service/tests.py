@@ -1,43 +1,42 @@
 from django.test import TestCase
-from .models import Place, Fact, Puzzle
+from .models import Quest
 
 
-class PlaceViewTests(TestCase):
+class QuestViewTests(TestCase):
     def setUp(self):
-        place = Place.objects.create(name='Placename', long='37', lat='56')
-        self.id = place.id
+        quest = Quest.objects.create(user_id=1, places_ids=[1, 2], cur_task=1, completed=0)
+        self.id = quest.id
 
-    def test_get_place_ok(self):
-        response = self.client.get('/place/{}/'.format(self.id))
+    def test_get_quest_ok(self):
+        response = self.client.get('/quest/{}/'.format(self.id))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Placename')
-        self.assertContains(response, '37')
-        self.assertContains(response, '56')
+        self.assertContains(response, '1')
+        self.assertContains(response, '2')
 
-    def test_get_place_not_exist(self):
-        response = self.client.get('/place/1000/')
+    def test_get_quest_not_exist(self):
+        response = self.client.get('/quest/1000/')
         self.assertEqual(response.status_code, 404)
 
 
-class PlacesViewTests(TestCase):
+class QuestsViewTests(TestCase):
     def setUp(self):
-        Place.objects.create(name='Placename', long='37', lat='56')
-        Place.objects.create(name='Anothername', long='57', lat='36')
+        Quest.objects.create(user_id=1, places_ids=[11, 12], cur_task=1, completed=0)
+        Quest.objects.create(user_id=2, places_ids=[13, 14], cur_task=1, completed=0)
 
-    def test_get_places_ok(self):
-        response = self.client.get('/place/')
+    def test_get_quests_ok(self):
+        response = self.client.get('/quest/')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Placename')
-        self.assertContains(response, '37')
-        self.assertContains(response, '56')
-        self.assertContains(response, 'Anothername')
-        self.assertContains(response, '57')
-        self.assertContains(response, '36')
+        self.assertContains(response, '11')
+        self.assertContains(response, '12')
+        self.assertContains(response, '13')
+        self.assertContains(response, '14')
 
-    def test_post_place(self):
-        response = self.client.post('/place/', {'name': 'Place_ka', 'long': '11', 'lat': '11'})
+    def test_post_quest(self):
+        response = self.client.post('/quest/', {'user_id': '2', 'places_ids': '1, 2',
+                                                'cur_task': '1', 'completed': '0'})
         self.assertEqual(response.status_code, 201)
 
-    def test_post_place_invalid(self):
-        response = self.client.post('/place/', {'name': 'Placename'})
+    def test_post_quest_invalid(self):
+        response = self.client.post('/quest/', {'user_id': '2', 'places_ids': '[wrong, wrong]',
+                                                'cur_task': '1', 'completed': '0'})
         self.assertEqual(response.status_code, 409)
