@@ -40,6 +40,6 @@ class Puzzle(models.Model):
         return {
             "place": str(self.place),
             "text": str(self.text),
-            "answer": str(self.answer),
+            # "answer": str(self.answer),
             "is_moderated": str(self.is_moderated),
         }

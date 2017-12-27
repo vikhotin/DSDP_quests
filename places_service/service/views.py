@@ -59,8 +59,8 @@ class FactsView(View):
             form.save()
             return HttpResponse('', status=201)
         else:
-            # raise Exception(form.errors)
-            return HttpResponse('', status=409)
+            raise Exception(form.errors)
+            # return HttpResponse('', status=409)
 
 
 class FactView(View):
@@ -92,8 +92,8 @@ class PuzzlesView(View):
             form.save()
             return HttpResponse('', status=201)
         else:
-            # raise Exception(form.errors)
-            return HttpResponse('', status=409)
+            raise Exception(form.errors)
+            # return HttpResponse('', status=409)
 
 
 class PuzzleView(View):
