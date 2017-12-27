@@ -21,6 +21,13 @@ class Fact(models.Model):
     text = models.TextField()
     is_moderated = models.BooleanField()
 
+    def to_json(self):
+        return {
+            "place": str(self.place),
+            "text": str(self.text),
+            "is_moderated": str(self.is_moderated),
+        }
+
 
 # Puzzle for the place model
 class Puzzle(models.Model):
@@ -28,3 +35,11 @@ class Puzzle(models.Model):
     text = models.TextField()
     answer = models.CharField(max_length=100)
     is_moderated = models.BooleanField()
+
+    def to_json(self):
+        return {
+            "place": str(self.place),
+            "text": str(self.text),
+            "answer": str(self.answer),
+            "is_moderated": str(self.is_moderated),
+        }
