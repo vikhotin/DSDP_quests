@@ -38,3 +38,16 @@ class QuestView(View):
             return HttpResponse('[]', content_type='application/json', status=404)
         quest_json = quest_info.to_json()
         return JsonResponse(quest_json, safe=False)
+
+
+class UserQuestsView(View):
+    def get(self, request, *args, **kwargs):
+        user_id = kwargs.get('user_id', None)
+        if user_id is None:
+            return HttpResponse(status=400)
+        quest_info = Quest.objects.filter(user_id=user_id)
+        if quest_info.exists():
+            quest_json = serializers.serialize('json', quest_info)
+            return JsonResponse(quest_json, safe=False)
+        else:
+            return HttpResponse('[]', content_type='application/json', status=404)

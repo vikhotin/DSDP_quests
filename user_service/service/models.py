@@ -9,6 +9,7 @@ class User(models.Model):
 
     def to_json(self):
         s = {
+            "id": str(self.id),
             "login": str(self.login),
             "name": str(self.name),
         }
