@@ -1,4 +1,5 @@
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 from django.core import serializers
@@ -96,6 +97,7 @@ class PuzzlesView(View):
             # return HttpResponse('', status=409)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class PuzzleView(View):
     def get(self, request, puzzle_id, *args, **kwargs):
         try:

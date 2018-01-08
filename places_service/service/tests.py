@@ -98,6 +98,15 @@ class PuzzleViewTests(TestCase):
         response = self.client.get('/puzzle/1000/')
         self.assertEqual(response.status_code, 404)
 
+    def test_post_puzzle_wrong_answer(self):
+        response = self.client.post('/puzzle/{}/'.format(self.id), {'answer': '41'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'wrong')
+
+    def test_post_puzzle_correct_answer(self):
+        response = self.client.post('/puzzle/{}/'.format(self.id), {'answer': '42'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'correct')
 
 class PuzzlesViewTests(TestCase):
     def setUp(self):
