@@ -104,3 +104,14 @@ class PuzzleView(View):
             return HttpResponse('[]', content_type='application/json', status=404)
         puzzle_json = puzzle_info.to_json()
         return JsonResponse(puzzle_json, safe=False)
+
+    # check if answer is correct
+    def post(self, request, puzzle_id, *args, **kwargs):
+        try:
+            puzzle_info = Puzzle.objects.get(id=puzzle_id)
+        except Puzzle.DoesNotExist:
+            return HttpResponse('[]', content_type='application/json', status=404)
+        if request.POST['answer'] == puzzle_info.answer:
+            return JsonResponse({"result": "correct"}, safe=False)
+        else:
+            return JsonResponse({"result": "wrong"}, safe=False)
