@@ -2,6 +2,8 @@ import requests
 import json
 from django.http import JsonResponse, HttpResponse
 from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 user_service_address = 'http://127.0.0.1:8010'
 places_service_address = 'http://127.0.0.1:8020'
@@ -13,21 +15,21 @@ class UserInfoView(View):
     @staticmethod
     def get(request, *args, **kwargs):
         user_login = kwargs.get('user_login')
-        res = requests.get(user_service_address+'/user/{}/'.format(user_login))
+        res = requests.get(user_service_address + '/user/{}/'.format(user_login))
         if res.status_code != 200:
             return HttpResponse(res.text, status=res.status_code)
         user_json = res.json()
         user_id = user_json['id']
-        res1 = requests.get(quests_service_address+'/user/{}/quests/'.format(user_id))
+        res1 = requests.get(quests_service_address + '/user/{}/quests/'.format(user_id))
         if res1.status_code == 200:
             user_json['quests'] = json.loads(res1.json())
         return JsonResponse(user_json)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class UserQuestView(View):
     # Get user's quest - progress
-    @staticmethod
-    def get(request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
         quest_id = kwargs.get('quest_id')
 
@@ -50,7 +52,7 @@ class UserQuestView(View):
         # places_ids = quest_json['places_ids']
         puzzles_ids = json.loads(quest_json['puzzles_ids'])
 
-        puzzle_id = int(puzzles_ids[cur_task-1])
+        puzzle_id = int(puzzles_ids[cur_task - 1])
         res2 = requests.get(places_service_address + '/puzzle/{}/'.format(puzzle_id))
         if res2.status_code != 200:
             return HttpResponse(res2.text, status=500)
@@ -61,4 +63,47 @@ class UserQuestView(View):
             'puzzle': res2.json(),
         }
 
+        return JsonResponse(result)
+
+    # Post user's answer - check if correct
+    def post(self, request, *args, **kwargs):
+        user_login = kwargs.get('user_login')
+        quest_id = kwargs.get('quest_id')
+
+        res = requests.get(user_service_address + '/user/{}/'.format(user_login))
+        if res.status_code != 200:
+            return HttpResponse(res.text, status=res.status_code)
+        user_json = res.json()
+        user_id = user_json['id']
+
+        res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
+        if res1.status_code != 200:
+            return HttpResponse(res1.text, status=res1.status_code)
+        quest_json = res1.json()
+        quest_user_id = quest_json['user_id']
+
+        if user_id != quest_user_id:
+            return HttpResponse("User doesn't have this quest", status=404)
+
+        cur_task = int(quest_json['cur_task'])
+        puzzles_ids = json.loads(quest_json['puzzles_ids'])
+
+        puzzle_id = int(puzzles_ids[cur_task - 1])
+
+        user_answer = request.POST['answer']
+
+        res2 = requests.post(places_service_address + '/puzzle/{}/'.format(puzzle_id),
+                             data={'answer': user_answer})
+        if res2.status_code != 200:
+            return HttpResponse(res2.text, status=500)
+
+        result = {
+            'user': res.json(),
+            'quest': res1.json(),
+            'puzzle': res2.json(),
+        }
+        if res2.json()['result'] != 'correct':
+            result['guess'] = 'wrong'
+        else:
+            result['guess'] = 'correct'
         return JsonResponse(result)

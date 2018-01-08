@@ -43,3 +43,13 @@ class UserQuestViewTest(TestCase):
     def test_get_user_info_no_user(self):
         response = self.client.get('/user/{}/quest/{}/'.format('chupachups', '1'))
         self.assertEqual(response.status_code, 404)
+
+    def test_post_puzzle_wrong_answer(self):
+        response = self.client.post('/user/{}/quest/{}/'.format('user1', '1'), {'answer': 'Бла'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'wrong')
+
+    def test_post_puzzle_correct_answer(self):
+        response = self.client.post('/user/{}/quest/{}/'.format('user1', '1'), {'answer': 'Кремль'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'correct')
