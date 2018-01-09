@@ -2,6 +2,7 @@ from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 from django.core import serializers
+from django.core.paginator import Paginator
 
 from .models import Quest
 from .forms import QuestForm
@@ -58,12 +59,16 @@ class QuestView(View):
 
 class UserQuestsView(View):
     def get(self, request, *args, **kwargs):
+        page_size = 5
         user_id = kwargs.get('user_id', None)
         if user_id is None:
             return HttpResponse(status=400)
-        quest_info = Quest.objects.filter(user_id=user_id)
+        quest_info = Quest.objects.filter(user_id=user_id).order_by('id')
         if quest_info.exists():
-            quest_json = serializers.serialize('json', quest_info)
+            pag = Paginator(quest_info, page_size)
+            page = request.GET.get('page', 1)
+            quest_page = pag.get_page(page)
+            quest_json = serializers.serialize('json', quest_page)
             return JsonResponse(quest_json, safe=False)
         else:
             return HttpResponse('[]', content_type='application/json', status=404)

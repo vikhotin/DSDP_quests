@@ -22,7 +22,8 @@ class UserInfoView(View):
             return HttpResponse(res.text, status=res.status_code)
         user_json = res.json()
         user_id = user_json['id']
-        res1 = requests.get(quests_service_address + '/user/{}/quests/'.format(user_id))
+        page = request.GET.get('page', 0)
+        res1 = requests.get(quests_service_address + '/user/{}/quests/?page={}'.format(user_id, page))
         if res1.status_code == 200:
             user_json['quests'] = json.loads(res1.json())
         return JsonResponse(user_json)
