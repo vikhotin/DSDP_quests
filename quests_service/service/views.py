@@ -31,6 +31,11 @@ class QuestsView(View):
 
 
 class QuestView(View):
+    # this method turns off csrf check
+    @csrf_exempt
+    def dispatch(self, request, *args, **kwargs):
+        return super(QuestView, self).dispatch(request, *args, **kwargs)
+
     def get(self, request, quest_id, *args, **kwargs):
         try:
             quest_info = Quest.objects.get(id=quest_id)

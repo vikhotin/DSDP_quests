@@ -89,6 +89,9 @@ class UserQuestView(View):
         if user_id != quest_user_id:
             return HttpResponse("User doesn't have this quest", status=404)
 
+        if quest_json['completed'] == 'True':
+            return HttpResponse('User has finished this quest')
+
         cur_task = int(quest_json['cur_task'])
         puzzles_ids = json.loads(quest_json['puzzles_ids'])
         places_ids = json.loads(quest_json['places_ids'])
@@ -112,7 +115,13 @@ class UserQuestView(View):
             result['guess'] = 'wrong'
         else:
             result['guess'] = 'correct'
-            # TODO: update quest
+            res3 = requests.put(quests_service_address + '/quest/{}/'.format(quest_id))
+            result['quest'] = res3.json()
+            if res3.json()['completed'] == 'True':
+                res4 = requests.put(user_service_address + '/user/{}/'.format(user_login),
+                                    {'inc': 'quests_completed'})
+                if res4.status_code != 200:
+                    return res4
         return JsonResponse(result)
 
 

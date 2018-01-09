@@ -47,12 +47,14 @@ class UserQuestViewTest(TestCase):
     def test_post_puzzle_wrong_answer(self):
         response = self.client.post('/user/{}/quest/{}/'.format('user1', '1'), {'answer': 'Бла'})
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'wrong')
+        # self.assertContains(response, 'wrong')
+        self.assertContains(response, 'finished')
 
     def test_post_puzzle_correct_answer(self):
         response = self.client.post('/user/{}/quest/{}/'.format('user1', '1'), {'answer': 'Кремль'})
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'correct')
+        # self.assertContains(response, 'correct')
+        self.assertContains(response, 'finished')
 
 
 class PlaceInfoViewTest(TestCase):

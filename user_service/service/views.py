@@ -43,14 +43,13 @@ class UserView(View):
         return JsonResponse(user_json, safe=False)
 
     def put(self, request, username, *args, **kwargs):
+        user = User.objects.get(login=username)
         if b'quests_number' in request.body:
-            user = User.objects.get(login=username)
             user.quests_number += 1
             user.save()
             user_json = user.to_json()
             return JsonResponse(user_json, safe=False)
         elif b'quests_completed' in request.body:
-            user = User.objects.get(login=username)
             user.quests_completed += 1
             user.save()
             user_json = user.to_json()
