@@ -1,4 +1,5 @@
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 from django.core import serializers
@@ -49,7 +50,8 @@ class FactsView(View):
         return super(FactsView, self).dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        fact_info = Fact.objects.all()
+        place_id = kwargs['place_id']
+        fact_info = Fact.objects.filter(place=place_id)
         fact_json = serializers.serialize('json', fact_info)
         return JsonResponse(fact_json, safe=False)
 
@@ -82,7 +84,8 @@ class PuzzlesView(View):
         return super(PuzzlesView, self).dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        puzzle_info = Puzzle.objects.all()
+        place_id = kwargs['place_id']
+        puzzle_info = Puzzle.objects.filter(place=place_id)
         puzzle_json = serializers.serialize('json', puzzle_info)
         return JsonResponse(puzzle_json, safe=False)
 
@@ -96,6 +99,7 @@ class PuzzlesView(View):
             # return HttpResponse('', status=409)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class PuzzleView(View):
     def get(self, request, puzzle_id, *args, **kwargs):
         try:
@@ -104,3 +108,14 @@ class PuzzleView(View):
             return HttpResponse('[]', content_type='application/json', status=404)
         puzzle_json = puzzle_info.to_json()
         return JsonResponse(puzzle_json, safe=False)
+
+    # check if answer is correct
+    def post(self, request, puzzle_id, *args, **kwargs):
+        try:
+            puzzle_info = Puzzle.objects.get(id=puzzle_id)
+        except Puzzle.DoesNotExist:
+            return HttpResponse('[]', content_type='application/json', status=404)
+        if request.POST['answer'] == puzzle_info.answer:
+            return JsonResponse({"result": "correct"}, safe=False)
+        else:
+            return JsonResponse({"result": "wrong"}, safe=False)
