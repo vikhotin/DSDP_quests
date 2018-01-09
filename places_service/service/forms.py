@@ -11,10 +11,10 @@ class PlaceForm(ModelForm):
 class FactForm(ModelForm):
     class Meta:
         model = Fact
-        fields = ['place', 'text', 'is_moderated']
+        fields = ['place', 'text', 'added_by', 'is_moderated']
 
 
 class PuzzleForm(ModelForm):
     class Meta:
         model = Puzzle
-        fields = ['place', 'text', 'answer', 'is_moderated']
+        fields = ['place', 'text', 'answer', 'added_by', 'is_moderated']

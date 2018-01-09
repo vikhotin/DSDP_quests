@@ -19,12 +19,14 @@ class Place(models.Model):
 class Fact(models.Model):
     place = models.ForeignKey(Place, on_delete=models.CASCADE)
     text = models.TextField()
+    added_by = models.CharField(max_length=25)
     is_moderated = models.BooleanField()
 
     def to_json(self):
         return {
             "place": str(self.place),
             "text": str(self.text),
+            "added_by": str(self.added_by),
             "is_moderated": str(self.is_moderated),
         }
 
@@ -34,6 +36,7 @@ class Puzzle(models.Model):
     place = models.ForeignKey(Place, on_delete=models.CASCADE)
     text = models.TextField()
     answer = models.CharField(max_length=100)
+    added_by = models.CharField(max_length=25)
     is_moderated = models.BooleanField()
 
     def to_json(self):
@@ -41,5 +44,6 @@ class Puzzle(models.Model):
             "place": str(self.place),
             "text": str(self.text),
             # "answer": str(self.answer),
+            "added_by": str(self.added_by),
             "is_moderated": str(self.is_moderated),
         }
