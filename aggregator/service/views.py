@@ -199,7 +199,6 @@ class NewQuestView(View):
             resp = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(i, 1))  # TODO: random puzzle
             puzzles_ids.extend([int(resp.json()['id'])])
 
-        # TODO part
         # adding the quest
         res1 = requests.post(quests_service_address + '/quest/', {
             "user_id": str(user_id),

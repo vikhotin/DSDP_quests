@@ -41,7 +41,11 @@ class QuestView(View):
 
     def put(self, request, quest_id, *args, **kwargs):
         q = Quest.objects.get(id=quest_id)
-        q.cur_task += 1
+        if q.cur_task == len(q.places_ids):
+            q.completed = True
+        else:
+            q.cur_task += 1
+
         q.save()
         user_json = q.to_json()
         return JsonResponse(user_json, safe=False)
