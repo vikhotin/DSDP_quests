@@ -14,8 +14,14 @@ class QuestViewTests(TestCase):
         self.assertContains(response, '2')
 
     def test_get_quest_not_exist(self):
-        response = self.client.get('/quest/1000/')
+        response = self.client.get('/quest/0/')
         self.assertEqual(response.status_code, 404)
+
+    def test_put_inc_cur_task(self):
+        response = self.client.put('/quest/{}/'.format(self.id))
+        self.assertEqual(response.status_code, 200)
+        q = Quest.objects.get(id=self.id)
+        self.assertEqual(q.cur_task, 2)
 
 
 class QuestsViewTests(TestCase):
@@ -52,9 +58,9 @@ class UserQuestsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '11')
         self.assertContains(response, '12')
-        self.assertNotContains(response, '13')
-        self.assertNotContains(response, '14')
+        self.assertNotContains(response, '"13')
+        self.assertNotContains(response, '"14')
 
     def test_get_quests_not_exists(self):
-        response = self.client.get('/user/21/quests/')
+        response = self.client.get('/user/0/quests/')
         self.assertEqual(response.status_code, 404)

@@ -158,7 +158,7 @@ class PlaceInfoView(View):
             return HttpResponse(res4.text, status=404)
         place_from_fact = re.findall(r'\d+', res4.json()['place'])[0]
 
-        if not(place_from_puzzle == place_id == place_from_fact):
+        if not (place_from_puzzle == place_id == place_from_fact):
             return HttpResponse('', status=400)
 
         result = {
@@ -202,18 +202,17 @@ class NewQuestView(View):
         # TODO part
         # adding the quest
         res1 = requests.post(quests_service_address + '/quest/', {
-                                 "user_id": str(user_id),
-                                 "places_ids": str(places_ids)[1:-1],
-                                 "puzzles_ids": str(puzzles_ids)[1:-1],
-                                 "cur_task": str(1),
-                                 "completed": str(0),
-                             })
+            "user_id": str(user_id),
+            "places_ids": str(places_ids)[1:-1],
+            "puzzles_ids": str(puzzles_ids)[1:-1],
+            "cur_task": str(1),
+            "completed": str(0),
+        })
         if res1.status_code != 201:
             return HttpResponse(res1.text, status=res1.status_code)
         else:
-            res3 = requests.put(user_service_address + '/user/{}/'.format(user_login), {
-                'inc': 'quests_number'
-            })
+            res3 = requests.put(user_service_address + '/user/{}/'.format(user_login),
+                                {'inc': 'quests_number'})
             if res3.status_code != 200:
                 return HttpResponse(res3.text, status=res1.status_code)
             else:

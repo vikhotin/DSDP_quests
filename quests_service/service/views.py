@@ -39,6 +39,13 @@ class QuestView(View):
         quest_json = quest_info.to_json()
         return JsonResponse(quest_json, safe=False)
 
+    def put(self, request, quest_id, *args, **kwargs):
+        q = Quest.objects.get(id=quest_id)
+        q.cur_task += 1
+        q.save()
+        user_json = q.to_json()
+        return JsonResponse(user_json, safe=False)
+
 
 class UserQuestsView(View):
     def get(self, request, *args, **kwargs):
