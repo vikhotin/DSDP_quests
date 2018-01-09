@@ -205,7 +205,7 @@ class NewQuestView(View):
             "places_ids": str(places_ids)[1:-1],
             "puzzles_ids": str(puzzles_ids)[1:-1],
             "cur_task": str(1),
-            "completed": str(0),
+            "completed": "False",
         })
         if res1.status_code != 201:
             return HttpResponse(res1.text, status=res1.status_code)
