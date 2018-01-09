@@ -50,7 +50,8 @@ class FactsView(View):
         return super(FactsView, self).dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        fact_info = Fact.objects.all()
+        place_id = kwargs['place_id']
+        fact_info = Fact.objects.filter(place=place_id)
         fact_json = serializers.serialize('json', fact_info)
         return JsonResponse(fact_json, safe=False)
 
@@ -83,7 +84,8 @@ class PuzzlesView(View):
         return super(PuzzlesView, self).dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        puzzle_info = Puzzle.objects.all()
+        place_id = kwargs['place_id']
+        puzzle_info = Puzzle.objects.filter(place=place_id)
         puzzle_json = serializers.serialize('json', puzzle_info)
         return JsonResponse(puzzle_json, safe=False)
 

@@ -47,16 +47,17 @@ class FactViewTests(TestCase):
     def setUp(self):
         place_1 = Place.objects.create(name='Placename', long='37', lat='56')
         fact = Fact.objects.create(place=place_1, text='Funny fact haha', added_by='admin', is_moderated='True')
+        self.place_id = place_1.id
         self.id = fact.id
 
     def test_get_fact_ok(self):
-        response = self.client.get('/fact/{}/'.format(self.id))
+        response = self.client.get('/place/{}/fact/{}/'.format(self.place_id, self.id))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Funny fact haha')
         self.assertContains(response, 'admin')
 
     def test_get_fact_not_exist(self):
-        response = self.client.get('/fact/1000/')
+        response = self.client.get('/place/{}/fact/1000/'.format(self.place_id))
         self.assertEqual(response.status_code, 404)
 
 
@@ -68,19 +69,20 @@ class FactsViewTests(TestCase):
         self.fk = place_1.id
 
     def test_get_facts_ok(self):
-        response = self.client.get('/fact/')
+        response = self.client.get('/place/{}/fact/'.format(self.fk))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Funny fact haha')
         self.assertContains(response, 'Did you know that?')
 
     def test_post_fact(self):
-        response = self.client.post('/fact/', {'place': '{}'.format(self.fk), 'text': 'succ',
-                                               'added_by': 'troll111', 'is_moderated': '0'})
+        response = self.client.post('/place/{}/fact/'.format(self.fk),
+                                    {'place': '{}'.format(self.fk), 'text': 'succ',
+                                     'added_by': 'troll111', 'is_moderated': '0'})
         self.assertEqual(response.status_code, 201)
 
     def test_post_fact_invalid(self):
         with self.assertRaises(Exception):
-            self.client.post('/fact/', {'place': '1000'})
+            self.client.post('/place/{}/fact/'.format(self.fk), {'place': '1000'})
 
 
 class PuzzleViewTests(TestCase):
@@ -88,26 +90,27 @@ class PuzzleViewTests(TestCase):
         place = Place.objects.create(name='Placename', long='37', lat='56')
         puzzle = Puzzle.objects.create(place=place, text='Answer to life the universe and everything',
                                        answer='42', added_by='normie', is_moderated='True')
+        self.fk = place.id
         self.id = puzzle.id
 
     def test_get_puzzle_ok(self):
-        response = self.client.get('/puzzle/{}/'.format(self.id))
+        response = self.client.get('/place/{}/puzzle/{}/'.format(self.fk, self.id))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Answer to life the universe and everything')
         self.assertNotContains(response, '42')
         self.assertContains(response, 'normie')
 
     def test_get_puzzle_not_exist(self):
-        response = self.client.get('/puzzle/1000/')
+        response = self.client.get('/place/{}/puzzle/1000/'.format(self.fk))
         self.assertEqual(response.status_code, 404)
 
     def test_post_puzzle_wrong_answer(self):
-        response = self.client.post('/puzzle/{}/'.format(self.id), {'answer': '41'})
+        response = self.client.post('/place/{}/puzzle/{}/'.format(self.fk, self.id), {'answer': '41'})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'wrong')
 
     def test_post_puzzle_correct_answer(self):
-        response = self.client.post('/puzzle/{}/'.format(self.id), {'answer': '42'})
+        response = self.client.post('/place/{}/puzzle/{}/'.format(self.fk, self.id), {'answer': '42'})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'correct')
 
@@ -120,17 +123,19 @@ class PuzzlesViewTests(TestCase):
         self.fk = place.id
 
     def test_get_puzzles_ok(self):
-        response = self.client.get('/puzzle/')
+        response = self.client.get('/place/{}/puzzle/'.format(self.fk))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Question 1')
         self.assertContains(response, 'Question 2')
 
     def test_post_puzzle(self):
-        response = self.client.post('/puzzle/', {'place': '{}'.format(self.fk), 'text': 'succ',
-                                                 'answer': 'sipp', 'added_by': 'orang', 'is_moderated': '0'})
+        response = self.client.post('/place/{}/puzzle/'.format(self.fk),
+                                    {'place': '{}'.format(self.fk), 'text': 'succ',
+                                    'answer': 'sipp', 'added_by': 'orang', 'is_moderated': '0'})
         self.assertEqual(response.status_code, 201)
 
     def test_post_puzzle_invalid(self):
         with self.assertRaises(Exception):
-            response = self.client.post('/puzzle/', {'place': '1000', 'text': 'succ',
-                                                     'answer': 'sipp', 'added_by': 'orang', 'is_moderated': '0'})
+            response = self.client.post('/place/{}/puzzle/'.format(self.fk),
+                                        {'place': '1000', 'text': 'succ',
+                                        'answer': 'sipp', 'added_by': 'orang', 'is_moderated': '0'})
