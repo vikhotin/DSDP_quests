@@ -90,3 +90,13 @@ class PlaceInfoViewTest(TestCase):
     def test_get_bad_request(self):
         response = self.client.get('/user/{}/quest/{}/place/{}/fact/{}/'.format('user1', '1', '3', '1'))
         self.assertEqual(response.status_code, 400)
+
+
+class NewQuestViewTest(TestCase):
+    def test_post_new_quest_ok(self):
+        response = self.client.post('/user/{}/quest/'.format('user1'))
+        self.assertEqual(response.status_code, 201)
+
+    def test_post_quest_no_user(self):
+        response = self.client.post('/user/{}/quest/'.format('chupachups'))
+        self.assertEqual(response.status_code, 404)

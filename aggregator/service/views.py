@@ -1,6 +1,7 @@
 import requests
 import json
 import re
+from random import shuffle
 from django.http import JsonResponse, HttpResponse
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -52,9 +53,11 @@ class UserQuestView(View):
         cur_task = int(quest_json['cur_task'])
         # places_ids = quest_json['places_ids']
         puzzles_ids = json.loads(quest_json['puzzles_ids'])
+        places_ids = json.loads(quest_json['places_ids'])
 
         puzzle_id = int(puzzles_ids[cur_task - 1])
-        res2 = requests.get(places_service_address + '/puzzle/{}/'.format(puzzle_id))
+        place_id = int(places_ids[cur_task - 1])
+        res2 = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(place_id, puzzle_id))
         if res2.status_code != 200:
             return HttpResponse(res2.text, status=500)
 
@@ -88,12 +91,14 @@ class UserQuestView(View):
 
         cur_task = int(quest_json['cur_task'])
         puzzles_ids = json.loads(quest_json['puzzles_ids'])
+        places_ids = json.loads(quest_json['places_ids'])
 
         puzzle_id = int(puzzles_ids[cur_task - 1])
+        place_id = int(places_ids[cur_task - 1])
 
         user_answer = request.POST['answer']
 
-        res2 = requests.post(places_service_address + '/puzzle/{}/'.format(puzzle_id),
+        res2 = requests.post(places_service_address + '/place/{}/puzzle/{}/'.format(place_id, puzzle_id),
                              data={'answer': user_answer})
         if res2.status_code != 200:
             return HttpResponse(res2.text, status=500)
@@ -112,6 +117,7 @@ class UserQuestView(View):
 
 
 class PlaceInfoView(View):
+    # see info about place - some fact
     def get(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
         quest_id = kwargs.get('quest_id')
@@ -138,7 +144,7 @@ class PlaceInfoView(View):
         puzzles_ids = json.loads(quest_json['puzzles_ids'])
 
         puzzle_id = int(puzzles_ids[cur_task - 1])
-        res2 = requests.get(places_service_address + '/puzzle/{}/'.format(puzzle_id))
+        res2 = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(place_id, puzzle_id))
         if res2.status_code != 200:
             return HttpResponse(res2.text, status=500)
         place_from_puzzle = re.findall(r'\d+', res2.json()['place'])[0]
@@ -147,7 +153,7 @@ class PlaceInfoView(View):
         if res3.status_code != 200:
             return HttpResponse(res3.text, status=404)
 
-        res4 = requests.get(places_service_address + '/fact/{}/'.format(fact_id))
+        res4 = requests.get(places_service_address + '/place/{}/fact/{}/'.format(place_id, fact_id))
         if res4.status_code != 200:
             return HttpResponse(res4.text, status=404)
         place_from_fact = re.findall(r'\d+', res4.json()['place'])[0]
@@ -164,3 +170,51 @@ class PlaceInfoView(View):
         }
 
         return JsonResponse(result)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class NewQuestView(View):
+    http_method_names = ['post']
+
+    # Create new quest
+    def post(self, request, *args, **kwargs):
+        user_login = kwargs.get('user_login')
+
+        res = requests.get(user_service_address + '/user/{}/'.format(user_login))
+        if res.status_code != 200:
+            return HttpResponse(res.text, status=res.status_code)
+        user_json = res.json()
+        user_id = user_json['id']
+
+        res2 = requests.get(places_service_address + '/place/')
+        if res2.status_code != 200:
+            return HttpResponse(res2.text, status=res2.status_code)
+
+        places_json = res2.json()
+        places_ids = [i['pk'] for i in json.loads(places_json)]
+        shuffle(places_ids)
+
+        puzzles_ids = []
+        for i in places_ids:
+            resp = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(i, 1))  # TODO: random puzzle
+            puzzles_ids.extend([int(resp.json()['id'])])
+
+        # TODO part
+        # adding the quest
+        res1 = requests.post(quests_service_address + '/quest/', {
+                                 "user_id": str(user_id),
+                                 "places_ids": str(places_ids)[1:-1],
+                                 "puzzles_ids": str(puzzles_ids)[1:-1],
+                                 "cur_task": str(1),
+                                 "completed": str(0),
+                             })
+        if res1.status_code != 201:
+            return HttpResponse(res1.text, status=res1.status_code)
+        else:
+            res3 = requests.put(user_service_address + '/user/{}/'.format(user_login), {
+                'inc': 'quests_number'
+            })
+            if res3.status_code != 200:
+                return HttpResponse(res3.text, status=res1.status_code)
+            else:
+                return HttpResponse(status=201)

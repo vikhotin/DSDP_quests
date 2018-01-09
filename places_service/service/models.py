@@ -24,6 +24,7 @@ class Fact(models.Model):
 
     def to_json(self):
         return {
+            "id": str(self.id),
             "place": str(self.place),
             "text": str(self.text),
             "added_by": str(self.added_by),
@@ -41,6 +42,7 @@ class Puzzle(models.Model):
 
     def to_json(self):
         return {
+            "id": str(self.id),
             "place": str(self.place),
             "text": str(self.text),
             # "answer": str(self.answer),
