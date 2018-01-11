@@ -220,13 +220,19 @@ class NewQuestView(View):
     def post(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
 
-        res = requests.get(user_service_address + '/user/{}/'.format(user_login))
+        try:
+            res = requests.get(user_service_address + '/user/{}/'.format(user_login))
+        except requests.exceptions.ConnectionError:
+            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
         if res.status_code != 200:
             return HttpResponse(res.text, status=res.status_code)
         user_json = res.json()
         user_id = user_json['id']
 
-        res2 = requests.get(places_service_address + '/place/')
+        try:
+            res2 = requests.get(places_service_address + '/place/')
+        except requests.exceptions.ConnectionError:
+            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
         if res2.status_code != 200:
             return HttpResponse(res2.text, status=res2.status_code)
 
@@ -236,26 +242,46 @@ class NewQuestView(View):
 
         puzzles_ids = []
         for i in places_ids:
-            resp = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(i, 1))  # TODO: random puzzle
+            try:
+                resp = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(i, 1))  # TODO: random puzzle
+            except requests.exceptions.ConnectionError:
+                return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
             puzzles_ids.extend([int(resp.json()['id'])])
 
         # adding the quest
-        res1 = requests.post(quests_service_address + '/quest/', {
-            "user_id": str(user_id),
-            "places_ids": str(places_ids)[1:-1],
-            "puzzles_ids": str(puzzles_ids)[1:-1],
-            "cur_task": str(1),
-            "completed": "False",
-        })
-        if res1.status_code != 201:
-            return HttpResponse(res1.text, status=res1.status_code)
-        else:
+        # increase number of user's quests
+        try:
             res3 = requests.put(user_service_address + '/user/{}/'.format(user_login),
                                 {'inc': 'quests_number'})
-            if res3.status_code != 200:
-                return HttpResponse(res3.text, status=res1.status_code)
-            else:
-                return HttpResponse(status=201)
+        except requests.exceptions.ConnectionError:
+            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+        if res3.status_code != 200:
+            return HttpResponse(res3.text, status=res3.status_code)
+        else:
+            try:
+                res1 = requests.post(quests_service_address + '/quest/', {
+                    "user_id": str(user_id),
+                    "places_ids": str(places_ids)[1:-1],
+                    "puzzles_ids": str(puzzles_ids)[1:-1],
+                    "cur_task": str(1),
+                    "completed": "False",
+                })
+                if res1.status_code != 201:
+                    return HttpResponse(res1.text, status=res1.status_code)
+                else:
+                    return HttpResponse(status=201)
+            except requests.exceptions.ConnectionError:
+                # rollback
+                try:
+                    res3 = requests.put(user_service_address + '/user/{}/'.format(user_login),
+                                        {'dec': 'quests_number'})
+                except requests.exceptions.ConnectionError:
+                    return HttpResponse("{'error': 'Fatal error: data might be inconsistent'}", status=503)
+                if res3.status_code != 200:
+                    return HttpResponse(res3.text, status=res3.status_code)
+                else:
+                    return HttpResponse("{'error': 'Quest currently cannot be added due to a server problem. "
+                                        "Try again later'}", status=503)
 
 
 class UserContributionPuzzle(View):

@@ -44,13 +44,23 @@ class UserView(View):
 
     def put(self, request, username, *args, **kwargs):
         user = User.objects.get(login=username)
-        if b'quests_number' in request.body:
+        if b'inc' in request.body and b'quests_number' in request.body:
             user.quests_number += 1
             user.save()
             user_json = user.to_json()
             return JsonResponse(user_json, safe=False)
-        elif b'quests_completed' in request.body:
+        elif b'inc' in request.body and b'quests_completed' in request.body:
             user.quests_completed += 1
+            user.save()
+            user_json = user.to_json()
+            return JsonResponse(user_json, safe=False)
+        elif b'dec' in request.body and b'quests_number' in request.body:
+            user.quests_number -= 1
+            user.save()
+            user_json = user.to_json()
+            return JsonResponse(user_json, safe=False)
+        elif b'dec' in request.body and b'quests_completed' in request.body:
+            user.quests_completed -= 1
             user.save()
             user_json = user.to_json()
             return JsonResponse(user_json, safe=False)
