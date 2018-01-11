@@ -44,4 +44,4 @@ class NewUserViewTests(TestCase):
 
     def test_post_user_already_exists(self):
         response = self.client.post('/user/', {'login': 'user1', 'password': '12345', 'name': 'Username'})
-        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.status_code, 400)

@@ -9,5 +9,7 @@ urlpatterns = [
         views.PlaceInfoView.as_view()),
     url('^user/(?P<user_login>.+)/quest/(?P<quest_id>[0-9]+)/$', views.UserQuestView.as_view()),
     url('^user/(?P<user_login>.+)/quest/$', views.NewQuestView.as_view()),
+    url('^user/(?P<user_login>.+)/place/(?P<place_id>[0-9]+)/puzzle/$', views.UserContributionPuzzle.as_view()),
+    url('^user/(?P<user_login>.+)/place/(?P<place_id>[0-9]+)/fact/$', views.UserContributionFact.as_view()),
     url('^user/(?P<user_login>.+)/$', views.UserInfoView.as_view()),
 ]

@@ -28,7 +28,7 @@ class QuestsView(View):
             return HttpResponse('', status=201)
         else:
             # raise Exception(form.errors)
-            return HttpResponse('', status=409)
+            return HttpResponse(form.errors.as_json(), status=400)
 
 
 class QuestView(View):
@@ -41,20 +41,22 @@ class QuestView(View):
         try:
             quest_info = Quest.objects.get(id=quest_id)
         except Quest.DoesNotExist:
-            return HttpResponse('[]', content_type='application/json', status=404)
+            return HttpResponse('', content_type='application/json', status=404)
         quest_json = quest_info.to_json()
         return JsonResponse(quest_json, safe=False)
 
     def put(self, request, quest_id, *args, **kwargs):
-        q = Quest.objects.get(id=quest_id)
-        if q.cur_task == len(q.places_ids):
-            q.completed = True
-        else:
-            q.cur_task += 1
-
-        q.save()
-        user_json = q.to_json()
-        return JsonResponse(user_json, safe=False)
+        try:
+            q = Quest.objects.get(id=quest_id)
+            if q.cur_task == len(q.places_ids):
+                q.completed = True
+            else:
+                q.cur_task += 1
+            q.save()
+            user_json = q.to_json()
+            return JsonResponse(user_json, safe=False)
+        except Quest.DoesNotExist:
+            return HttpResponse('', status=500)
 
 
 class UserQuestsView(View):
@@ -71,4 +73,4 @@ class UserQuestsView(View):
             quest_json = serializers.serialize('json', quest_page)
             return JsonResponse(quest_json, safe=False)
         else:
-            return HttpResponse('[]', content_type='application/json', status=404)
+            return HttpResponse('', content_type='application/json', status=404)

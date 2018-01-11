@@ -17,15 +17,24 @@ class UserInfoView(View):
     @staticmethod
     def get(request, *args, **kwargs):
         user_login = kwargs.get('user_login')
-        res = requests.get(user_service_address + '/user/{}/'.format(user_login))
+        try:
+            res = requests.get(user_service_address + '/user/{}/'.format(user_login))
+        except requests.exceptions.ConnectionError:
+            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
         if res.status_code != 200:
             return HttpResponse(res.text, status=res.status_code)
+
         user_json = res.json()
         user_id = user_json['id']
         page = request.GET.get('page', 0)
-        res1 = requests.get(quests_service_address + '/user/{}/quests/?page={}'.format(user_id, page))
-        if res1.status_code == 200:
-            user_json['quests'] = json.loads(res1.json())
+
+        try:
+            res1 = requests.get(quests_service_address + '/user/{}/quests/?page={}'.format(user_id, page))
+            if res1.status_code == 200:
+                user_json['quests'] = json.loads(res1.json())
+        except requests.exceptions.ConnectionError:
+            user_json['quests'] = 'Quests currently unavailable'
+
         return JsonResponse(user_json)
 
 
@@ -36,13 +45,19 @@ class UserQuestView(View):
         user_login = kwargs.get('user_login')
         quest_id = kwargs.get('quest_id')
 
-        res = requests.get(user_service_address + '/user/{}/'.format(user_login))
+        try:
+            res = requests.get(user_service_address + '/user/{}/'.format(user_login))
+        except requests.exceptions.ConnectionError:
+            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
         if res.status_code != 200:
             return HttpResponse(res.text, status=res.status_code)
         user_json = res.json()
         user_id = user_json['id']
 
-        res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
+        try:
+            res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
+        except requests.exceptions.ConnectionError:
+            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
         if res1.status_code != 200:
             return HttpResponse(res1.text, status=res1.status_code)
         quest_json = res1.json()
@@ -58,7 +73,10 @@ class UserQuestView(View):
 
         puzzle_id = int(puzzles_ids[cur_task - 1])
         place_id = int(places_ids[cur_task - 1])
-        res2 = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(place_id, puzzle_id))
+        try:
+            res2 = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(place_id, puzzle_id))
+        except requests.exceptions.ConnectionError:
+            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
         if res2.status_code != 200:
             return HttpResponse(res2.text, status=500)
 
@@ -134,13 +152,19 @@ class PlaceInfoView(View):
         place_id = kwargs.get('place_id')
         fact_id = kwargs.get('fact_id')
 
-        res = requests.get(user_service_address + '/user/{}/'.format(user_login))
+        try:
+            res = requests.get(user_service_address + '/user/{}/'.format(user_login))
+        except requests.exceptions.ConnectionError:
+            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
         if res.status_code != 200:
             return HttpResponse(res.text, status=res.status_code)
         user_json = res.json()
         user_id = user_json['id']
 
-        res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
+        try:
+            res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
+        except requests.exceptions.ConnectionError:
+            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
         if res1.status_code != 200:
             return HttpResponse(res1.text, status=res1.status_code)
         quest_json = res1.json()
@@ -149,35 +173,41 @@ class PlaceInfoView(View):
         if user_id != quest_user_id:
             return HttpResponse("User doesn't have this quest", status=404)
 
+        result = {
+            'user': res.json(),
+            'quest': res1.json(),
+        }
+
         cur_task = int(quest_json['cur_task'])
         # places_ids = quest_json['places_ids']
         puzzles_ids = json.loads(quest_json['puzzles_ids'])
 
         puzzle_id = int(puzzles_ids[cur_task - 1])
-        res2 = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(place_id, puzzle_id))
-        if res2.status_code != 200:
-            return HttpResponse(res2.text, status=500)
-        place_from_puzzle = re.findall(r'\d+', res2.json()['place'])[0]
+        try:
+            res2 = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(place_id, puzzle_id))
+            if res2.status_code != 200:
+                    return HttpResponse(res2.text, status=500)
+            place_from_puzzle = re.findall(r'\d+', res2.json()['place'])[0]
 
-        res3 = requests.get(places_service_address + '/place/{}/'.format(place_id))
-        if res3.status_code != 200:
-            return HttpResponse(res3.text, status=404)
+            res3 = requests.get(places_service_address + '/place/{}/'.format(place_id))
+            if res3.status_code != 200:
+                return HttpResponse(res3.text, status=404)
 
-        res4 = requests.get(places_service_address + '/place/{}/fact/{}/'.format(place_id, fact_id))
-        if res4.status_code != 200:
-            return HttpResponse(res4.text, status=404)
-        place_from_fact = re.findall(r'\d+', res4.json()['place'])[0]
+            res4 = requests.get(places_service_address + '/place/{}/fact/{}/'.format(place_id, fact_id))
+            if res4.status_code != 200:
+                return HttpResponse(res4.text, status=404)
+            place_from_fact = re.findall(r'\d+', res4.json()['place'])[0]
 
-        if not (place_from_puzzle == place_id == place_from_fact):
-            return HttpResponse('', status=400)
-
-        result = {
-            'user': res.json(),
-            'quest': res1.json(),
-            'puzzle': res2.json(),
-            'place': res3.json(),
-            'fact': res4.json(),
-        }
+            if not (place_from_puzzle == place_id == place_from_fact):
+                return HttpResponse('', status=400)
+        except requests.exceptions.ConnectionError:
+            result['puzzle'] = 'Unknown'
+            result['place'] = 'Unknown'
+            result['fact'] = 'Unknown'
+        else:
+            result['puzzle'] = res2.json()
+            result['place'] = res3.json()
+            result['fact'] = res4.json()
 
         return JsonResponse(result)
 
@@ -226,3 +256,13 @@ class NewQuestView(View):
                 return HttpResponse(res3.text, status=res1.status_code)
             else:
                 return HttpResponse(status=201)
+
+
+class UserContributionPuzzle(View):
+    # todo in future
+    pass
+
+
+class UserContributionFact(View):
+    # todo in future
+    pass
