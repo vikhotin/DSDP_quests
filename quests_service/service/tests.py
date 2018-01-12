@@ -45,7 +45,7 @@ class QuestsViewTests(TestCase):
     def test_post_quest_invalid(self):
         response = self.client.post('/quest/', {'user_id': '2', 'places_ids': '[wrong, wrong]', 'puzzles_ids': '1, 1',
                                                 'cur_task': '1', 'completed': '0'})
-        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.status_code, 400)
 
 
 class UserQuestsViewTests(TestCase):

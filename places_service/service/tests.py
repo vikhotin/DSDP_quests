@@ -40,7 +40,7 @@ class PlacesViewTests(TestCase):
 
     def test_post_place_invalid(self):
         response = self.client.post('/place/', {'name': 'Placename'})
-        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.status_code, 400)
 
 
 class FactViewTests(TestCase):
@@ -81,8 +81,9 @@ class FactsViewTests(TestCase):
         self.assertEqual(response.status_code, 201)
 
     def test_post_fact_invalid(self):
-        with self.assertRaises(Exception):
-            self.client.post('/place/{}/fact/'.format(self.fk), {'place': '1000'})
+        # with self.assertRaises(Exception):
+        response = self.client.post('/place/{}/fact/'.format(self.fk), {'place': '1000'})
+        self.assertEqual(response.status_code, 400)
 
 
 class PuzzleViewTests(TestCase):
@@ -135,7 +136,8 @@ class PuzzlesViewTests(TestCase):
         self.assertEqual(response.status_code, 201)
 
     def test_post_puzzle_invalid(self):
-        with self.assertRaises(Exception):
-            response = self.client.post('/place/{}/puzzle/'.format(self.fk),
-                                        {'place': '1000', 'text': 'succ',
-                                        'answer': 'sipp', 'added_by': 'orang', 'is_moderated': '0'})
+        # with self.assertRaises(Exception):
+        response = self.client.post('/place/{}/puzzle/'.format(self.fk),
+                                    {'place': '1000', 'text': 'succ',
+                                    'answer': 'sipp', 'added_by': 'orang', 'is_moderated': '0'})
+        self.assertEqual(response.status_code, 400)

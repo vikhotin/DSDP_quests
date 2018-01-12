@@ -28,7 +28,7 @@ class PlacesView(View):
             return HttpResponse('', status=201)
         else:
             # raise Exception(form.errors)
-            return HttpResponse('', status=409)
+            return HttpResponse(form.errors, status=400)
 
 
 class PlaceView(View):
@@ -36,7 +36,7 @@ class PlaceView(View):
         try:
             place_info = Place.objects.get(id=place_id)
         except Place.DoesNotExist:
-            return HttpResponse('[]', content_type='application/json', status=404)
+            return HttpResponse('', content_type='application/json', status=404)
         place_json = place_info.to_json()
         return JsonResponse(place_json, safe=False)
 
@@ -61,8 +61,8 @@ class FactsView(View):
             form.save()
             return HttpResponse('', status=201)
         else:
-            raise Exception(form.errors)
-            # return HttpResponse('', status=409)
+            # raise Exception(form.errors)
+            return HttpResponse(form.errors, status=400)
 
 
 class FactView(View):
@@ -70,7 +70,7 @@ class FactView(View):
         try:
             fact_info = Fact.objects.get(id=fact_id)
         except Fact.DoesNotExist:
-            return HttpResponse('[]', content_type='application/json', status=404)
+            return HttpResponse('', content_type='application/json', status=404)
         fact_json = fact_info.to_json()
         return JsonResponse(fact_json, safe=False)
 
@@ -95,8 +95,8 @@ class PuzzlesView(View):
             form.save()
             return HttpResponse('', status=201)
         else:
-            raise Exception(form.errors)
-            # return HttpResponse('', status=409)
+            # raise Exception(form.errors)
+            return HttpResponse(form.errors, status=400)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -105,7 +105,7 @@ class PuzzleView(View):
         try:
             puzzle_info = Puzzle.objects.get(id=puzzle_id)
         except Puzzle.DoesNotExist:
-            return HttpResponse('[]', content_type='application/json', status=404)
+            return HttpResponse('', content_type='application/json', status=404)
         puzzle_json = puzzle_info.to_json()
         return JsonResponse(puzzle_json, safe=False)
 
@@ -114,7 +114,7 @@ class PuzzleView(View):
         try:
             puzzle_info = Puzzle.objects.get(id=puzzle_id)
         except Puzzle.DoesNotExist:
-            return HttpResponse('[]', content_type='application/json', status=404)
+            return HttpResponse('', content_type='application/json', status=404)
         if request.POST['answer'] == puzzle_info.answer:
             return JsonResponse({"result": "correct"}, safe=False)
         else:
