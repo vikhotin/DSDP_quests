@@ -7,6 +7,8 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
+from aggregator.celery import task_check_user_answer
+
 user_service_address = 'http://127.0.0.1:8010'
 places_service_address = 'http://127.0.0.1:8020'
 quests_service_address = 'http://127.0.0.1:8030'
@@ -93,13 +95,19 @@ class UserQuestView(View):
         user_login = kwargs.get('user_login')
         quest_id = kwargs.get('quest_id')
 
-        res = requests.get(user_service_address + '/user/{}/'.format(user_login))
+        try:
+            res = requests.get(user_service_address + '/user/{}/'.format(user_login))
+        except requests.exceptions.ConnectionError:
+            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
         if res.status_code != 200:
             return HttpResponse(res.text, status=res.status_code)
         user_json = res.json()
         user_id = user_json['id']
 
-        res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
+        try:
+            res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
+        except requests.exceptions.ConnectionError:
+            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
         if res1.status_code != 200:
             return HttpResponse(res1.text, status=res1.status_code)
         quest_json = res1.json()
@@ -111,6 +119,11 @@ class UserQuestView(View):
         if quest_json['completed'] == 'True':
             return HttpResponse('User has finished this quest')
 
+        result = {
+            'user': res.json(),
+            'quest': res1.json(),
+        }
+
         cur_task = int(quest_json['cur_task'])
         puzzles_ids = json.loads(quest_json['puzzles_ids'])
         places_ids = json.loads(quest_json['places_ids'])
@@ -120,27 +133,10 @@ class UserQuestView(View):
 
         user_answer = request.POST['answer']
 
-        res2 = requests.post(places_service_address + '/place/{}/puzzle/{}/'.format(place_id, puzzle_id),
-                             data={'answer': user_answer})
-        if res2.status_code != 200:
-            return HttpResponse(res2.text, status=500)
+        task_check_user_answer.delay(puzzle_id, place_id, quest_id, user_login, user_answer)
 
-        result = {
-            'user': res.json(),
-            'quest': res1.json(),
-            # 'puzzle': res2.json(),
-        }
-        if res2.json()['result'] != 'correct':
-            result['guess'] = 'wrong'
-        else:
-            result['guess'] = 'correct'
-            res3 = requests.put(quests_service_address + '/quest/{}/'.format(quest_id))
-            result['quest'] = res3.json()
-            if res3.json()['completed'] == 'True':
-                res4 = requests.put(user_service_address + '/user/{}/'.format(user_login),
-                                    {'inc': 'quests_completed'})
-                if res4.status_code != 200:
-                    return res4
+        result['guess'] = 'checking'
+
         return JsonResponse(result)
 
 
