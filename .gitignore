@@ -102,3 +102,6 @@ ENV/
 
 # Sqlite
 *.sqlite3
+
+# Bootstrap static folder
+aggregator/service/static
