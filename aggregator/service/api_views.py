@@ -22,7 +22,7 @@ class UserInfoView(View):
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
         except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+            return JsonResponse({'error': 'Service currently unavailable'}, status=503)
         if res.status_code != 200:
             return HttpResponse(res.text, status=res.status_code)
 
@@ -33,7 +33,8 @@ class UserInfoView(View):
         try:
             res1 = requests.get(quests_service_address + '/user/{}/quests/?page={}'.format(user_id, page))
             if res1.status_code == 200:
-                user_json['quests'] = json.loads(res1.json())
+                user_json['quests'] = res1.json()['quests']
+                user_json['pagination'] = res1.json()['pagination']
         except requests.exceptions.ConnectionError:
             user_json['quests'] = 'Quests currently unavailable'
 
@@ -50,7 +51,7 @@ class UserQuestView(View):
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
         except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+            return JsonResponse({'error': 'Service currently unavailable'}, status=503)
         if res.status_code != 200:
             return HttpResponse(res.text, status=res.status_code)
         user_json = res.json()
@@ -59,14 +60,14 @@ class UserQuestView(View):
         try:
             res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
         except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+            return JsonResponse({'error': 'Service currently unavailable'}, status=503)
         if res1.status_code != 200:
             return HttpResponse(res1.text, status=res1.status_code)
         quest_json = res1.json()
         quest_user_id = quest_json['user_id']
 
         if user_id != quest_user_id:
-            return HttpResponse("User doesn't have this quest", status=404)
+            return HttpResponse('{"error": "User doesn\'t have this quest"}', status=404)
 
         cur_task = int(quest_json['cur_task'])
         # places_ids = quest_json['places_ids']
@@ -78,7 +79,7 @@ class UserQuestView(View):
         try:
             res2 = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(place_id, puzzle_id))
         except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+            return JsonResponse({'error': 'Service currently unavailable'}, status=503)
         if res2.status_code != 200:
             return HttpResponse(res2.text, status=500)
 
@@ -98,7 +99,7 @@ class UserQuestView(View):
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
         except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+            return JsonResponse({'error': 'Service currently unavailable'}, status=503)
         if res.status_code != 200:
             return HttpResponse(res.text, status=res.status_code)
         user_json = res.json()
@@ -107,7 +108,7 @@ class UserQuestView(View):
         try:
             res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
         except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+            return JsonResponse({'error': 'Service currently unavailable'}, status=503)
         if res1.status_code != 200:
             return HttpResponse(res1.text, status=res1.status_code)
         quest_json = res1.json()
@@ -151,7 +152,7 @@ class PlaceInfoView(View):
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
         except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+            return JsonResponse({'error': 'Service currently unavailable'}, status=503)
         if res.status_code != 200:
             return HttpResponse(res.text, status=res.status_code)
         user_json = res.json()
@@ -160,7 +161,7 @@ class PlaceInfoView(View):
         try:
             res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
         except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+            return JsonResponse({'error': 'Service currently unavailable'}, status=503)
         if res1.status_code != 200:
             return HttpResponse(res1.text, status=res1.status_code)
         quest_json = res1.json()
@@ -219,7 +220,7 @@ class NewQuestView(View):
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
         except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+            return JsonResponse({'error': 'Service currently unavailable'}, status=503)
         if res.status_code != 200:
             return HttpResponse(res.text, status=res.status_code)
         user_json = res.json()
@@ -228,7 +229,7 @@ class NewQuestView(View):
         try:
             res2 = requests.get(places_service_address + '/place/')
         except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+            return JsonResponse({'error': 'Service currently unavailable'}, status=503)
         if res2.status_code != 200:
             return HttpResponse(res2.text, status=res2.status_code)
 
@@ -250,7 +251,7 @@ class NewQuestView(View):
             res3 = requests.put(user_service_address + '/user/{}/'.format(user_login),
                                 {'inc': 'quests_number'})
         except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+            return JsonResponse({'error': 'Service currently unavailable'}, status=503)
         if res3.status_code != 200:
             return HttpResponse(res3.text, status=res3.status_code)
         else:
@@ -272,12 +273,12 @@ class NewQuestView(View):
                     res3 = requests.put(user_service_address + '/user/{}/'.format(user_login),
                                         {'dec': 'quests_number'})
                 except requests.exceptions.ConnectionError:
-                    return HttpResponse("{'error': 'Fatal error: data might be inconsistent'}", status=503)
+                    return HttpResponse('{"error": "Fatal error: data might be inconsistent"}', status=503)
                 if res3.status_code != 200:
                     return HttpResponse(res3.text, status=res3.status_code)
                 else:
-                    return HttpResponse("{'error': 'Quest currently cannot be added due to a server problem. "
-                                        "Try again later'}", status=503)
+                    return HttpResponse('{"error": "Quest currently cannot be added due to a server problem. '
+                                        'Try again later"}', status=503)
 
 
 class UserContributionPuzzle(View):

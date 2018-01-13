@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 from django.core import serializers
 from django.core.paginator import Paginator
+from json import loads
 
 from .models import Quest
 from .forms import QuestForm
@@ -41,7 +42,7 @@ class QuestView(View):
         try:
             quest_info = Quest.objects.get(id=quest_id)
         except Quest.DoesNotExist:
-            return HttpResponse('', content_type='application/json', status=404)
+            return HttpResponse('{}', content_type='application/json', status=404)
         quest_json = quest_info.to_json()
         return JsonResponse(quest_json, safe=False)
 
@@ -71,6 +72,18 @@ class UserQuestsView(View):
             page = request.GET.get('page', 1)
             quest_page = pag.get_page(page)
             quest_json = serializers.serialize('json', quest_page)
+            quest_json = loads(quest_json)
+            quest_json = {
+                'pagination': {
+                    'has_previous': quest_page.has_previous(),
+                    'previous_page_number': quest_page.previous_page_number() if quest_page.has_previous() else '',
+                    'number': quest_page.number,
+                    'num_pages': quest_page.paginator.num_pages,
+                    'has_next': quest_page.has_next(),
+                    'next_page_number': quest_page.next_page_number() if quest_page.has_next() else '',
+                },
+                'quests': quest_json
+            }
             return JsonResponse(quest_json, safe=False)
         else:
-            return HttpResponse('', content_type='application/json', status=404)
+            return HttpResponse('{}', content_type='application/json', status=404)

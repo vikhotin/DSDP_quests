@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Квесты</title>
+    <script src="/static/jquery/dist/jquery.js"></script>
+    <script type="text/javascript" src="/static/bootstrap/dist/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/static/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/bootstrap/dist/css/bootstrap-theme.min.css">
+    <style>
+        body {
+            background-image: linear-gradient(to right, yellowgreen, lightskyblue);
+        }
+    </style>
+    </head>
+<body>
+    <h1 class="text-center">{{ name }}</h1>
+    <h4 class="text-center" style="color:grey">(@{{ login }})</h4>
+    <div class="container">
+        {% if quests %}
+        <div class="row">
+            <h4>Ваши квесты</h4>
+            <div class="col-sm-2">
+                {% for quest in quests %}
+                <a href="{% url 'service:quest' login quest.pk %}" class="list-group-item">
+                    Квест №{{ quest.pk }}
+                    {% if quest.fields.completed %}
+                    <span class="glyphicon glyphicon-ok"></span>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="row pagination">
+            <span class="step-links">
+                {% if pagination.has_previous %}
+                    <a href="?page=1">&laquo; первая</a>
+                    <a href="?page={{ pagination.previous_page_number }}">предыдущая</a>
+                {% endif %}
+
+                <span class="current">
+                    Страница {{ pagination.number }} из {{ pagination.num_pages }}.
+                </span>
+
+                {% if pagination.has_next %}
+                    <a href="?page={{ pagination.next_page_number }}">следующая</a>
+                    <a href="?page={{ pagination.num_pages }}">последняя &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
+        <div class="row">
+            <p>
+                Пройдено: {{ quests_completed }} из {{ quests_number }}
+            </p>
+        </div>
+        {% else %}
+        <div class="row">
+            <h4>У вас нет квестов</h4>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

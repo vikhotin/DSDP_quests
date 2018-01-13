@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Квесты</title>
+    <script src="/static/jquery/dist/jquery.js"></script>
+    <script type="text/javascript" src="/static/bootstrap/dist/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/static/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/bootstrap/dist/css/bootstrap-theme.min.css">
+    <style>
+        body {
+            background-image: linear-gradient(to right, yellowgreen, lightskyblue);
+        }
+    </style>
+    </head>
+<body>
+    <h1 class="text-center">{{ user.name }}</h1>
+    <h4 class="text-center" style="color:grey">(@{{ user.login }})</h4>
+    <h2 class="text-center">
+        Квест №{{ quest.id }}
+    </h2>
+    <div class="container">
+        {% if quest.completed == 'False' %}
+        <div class="row">
+            <h4>Задание №{{ quest.cur_task }}</h4>
+            <div class="col-sm-12">
+                {{ puzzle.text }}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-6">
+                <form class="form-signin" id="answer_form" method="post"
+                      action="{% url 'service:quest' user.login quest.id %}">
+                  {% csrf_token %}
+
+                  <br>
+                  <input type="text" name="answer" class="form-control" placeholder="Ваш ответ" value="" required autofocus>
+                  <br>
+                  <button class="btn btn-lg btn-primary btn-block" type="submit">Отправить</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="row">
+            <h4>Вы прошли данный квест</h4>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

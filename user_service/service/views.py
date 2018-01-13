@@ -38,7 +38,7 @@ class UserView(View):
             User.objects.defer('password')
             user_info = User.objects.get(login=username)
         except User.DoesNotExist:
-            return HttpResponse('', content_type='application/json', status=404)
+            return HttpResponse('{}', content_type='application/json', status=404)
         user_json = user_info.to_json()
         return JsonResponse(user_json, safe=False)
 

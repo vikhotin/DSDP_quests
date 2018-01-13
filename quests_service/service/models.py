@@ -11,6 +11,7 @@ class Quest(models.Model):
 
     def to_json(self):
         return {
+            "id": str(self.id),
             "user_id": str(self.user_id),
             "places_ids": str(self.places_ids),
             "puzzles_ids": str(self.puzzles_ids),
