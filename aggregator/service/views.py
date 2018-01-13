@@ -44,7 +44,20 @@ class UiUserQuestView(View):
 
     # Post user's answer - check if correct
     def post(self, request, *args, **kwargs):
-        pass
+        user_login = kwargs.get('user_login')
+        quest_id = kwargs.get('quest_id')
+        answer = request.POST.get('answer')
+        res = requests.post(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
+                            data={'answer': answer})
+        data = res.json()
+        if res.status_code == 200:
+            return render(request, 'service/questinfo.html', data)
+        elif res.status_code == 404:
+            return render(request, 'service/404.html', data)
+        elif res.status_code == 503:
+            return render(request, 'service/503.html', data)
+        else:
+            return res
 
 
 class UiPlaceInfoView(View):

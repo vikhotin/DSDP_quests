@@ -115,10 +115,10 @@ class UserQuestView(View):
         quest_user_id = quest_json['user_id']
 
         if user_id != quest_user_id:
-            return HttpResponse("User doesn't have this quest", status=404)
+            return HttpResponse('{"error": "User doesn\'t have this quest"}', status=404)
 
         if quest_json['completed'] == 'True':
-            return HttpResponse('User has finished this quest')
+            return HttpResponse('{"error": "User has finished this quest"}')
 
         result = {
             'user': res.json(),

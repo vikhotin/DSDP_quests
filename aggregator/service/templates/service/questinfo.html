@@ -40,11 +40,23 @@
                 </form>
             </div>
         </div>
+            {% if guess == 'checking' %}
+            <br>
+            <p>
+                Ваш ответ отправлен на проверку
+            </p>
+            <a href="{% url 'service:quest' user.login quest.id %}">
+                Нажмите, чтобы обновить страницу
+            </a>
+            {% endif %}
         {% else %}
         <div class="row">
-            <h4>Вы прошли данный квест</h4>
+            <h4>Вы прошли этот квест</h4>
         </div>
         {% endif %}
+        <div class="row">
+            <a href="{% url 'service:user' user.login%}">Вернуться к списку</a>
+        </div>
     </div>
 </body>
 </html>
