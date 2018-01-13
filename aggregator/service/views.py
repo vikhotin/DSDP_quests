@@ -1,9 +1,6 @@
 import requests
 import json
-import re
-from random import shuffle
-from django.http import JsonResponse, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views import View
 
 this_service_address = 'http://127.0.0.1:8000'
@@ -69,7 +66,18 @@ class UiPlaceInfoView(View):
 class UiNewQuestView(View):
     # Create new quest
     def post(self, request, *args, **kwargs):
-        pass
+        user_login = kwargs.get('user_login')
+        res = requests.post(this_service_address + '/api/user/{}/quest/'.format(user_login))
+        if res.status_code == 201:
+            return redirect('service:user', user_login)
+        elif res.status_code == 404:
+            data = res.json()
+            return render(request, 'service/404.html', data)
+        elif res.status_code == 503:
+            data = res.json()
+            return render(request, 'service/503.html', data)
+        else:
+            return res
 
 
 class UiUserContributionPuzzle(View):

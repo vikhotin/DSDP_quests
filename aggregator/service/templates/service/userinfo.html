@@ -17,37 +17,53 @@
     <h1 class="text-center">{{ name }}</h1>
     <h4 class="text-center" style="color:grey">(@{{ login }})</h4>
     <div class="container">
-        {% if quests %}
         <div class="row">
-            <h4>Ваши квесты</h4>
-            <div class="col-sm-2">
-                {% for quest in quests %}
-                <a href="{% url 'service:quest' login quest.pk %}" class="list-group-item">
-                    Квест №{{ quest.pk }}
-                    {% if quest.fields.completed %}
-                    <span class="glyphicon glyphicon-ok"></span>
-                    {% endif %}
-                </a>
-                {% endfor %}
+            <div class="pull-right">
+                <form class="form-row" id="new_quest_form" method="post"
+                      action="{% url 'service:newquest' login %}">
+                  {% csrf_token %}
+                  <button class="btn btn-lg btn-primary btn-block" type="submit">
+                      <span class="glyphicon glyphicon-plus"></span>
+                      Добавить новый квест
+                  </button>
+                </form>
             </div>
         </div>
-        <div class="row pagination">
-            <span class="step-links">
-                {% if pagination.has_previous %}
-                    <a href="?page=1">&laquo; первая</a>
-                    <a href="?page={{ pagination.previous_page_number }}">предыдущая</a>
-                {% endif %}
+        {% if quests %}
+            <h4>Ваши квесты</h4>
+            {% if not 'unavailable' in quests %}
+            <div class="row">
+                <div class="col-sm-2">
+                    {% for quest in quests %}
+                    <a href="{% url 'service:quest' login quest.pk %}" class="list-group-item">
+                        Квест №{{ quest.pk }}
+                        {% if quest.fields.completed %}
+                        <span class="glyphicon glyphicon-ok"></span>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="row pagination">
+                <span class="step-links">
+                    {% if pagination.has_previous %}
+                        <a href="?page=1">&laquo; первая</a>
+                        <a href="?page={{ pagination.previous_page_number }}">предыдущая</a>
+                    {% endif %}
 
-                <span class="current">
-                    Страница {{ pagination.number }} из {{ pagination.num_pages }}.
+                    <span class="current">
+                        Страница {{ pagination.number }} из {{ pagination.num_pages }}.
+                    </span>
+
+                    {% if pagination.has_next %}
+                        <a href="?page={{ pagination.next_page_number }}">следующая</a>
+                        <a href="?page={{ pagination.num_pages }}">последняя &raquo;</a>
+                    {% endif %}
                 </span>
-
-                {% if pagination.has_next %}
-                    <a href="?page={{ pagination.next_page_number }}">следующая</a>
-                    <a href="?page={{ pagination.num_pages }}">последняя &raquo;</a>
-                {% endif %}
-            </span>
-        </div>
+            </div>
+            {% else %}
+            <p class="text-danger">{{ quests }}</p>
+            {% endif %}
         <div class="row">
             <p>
                 Пройдено: {{ quests_completed }} из {{ quests_number }}

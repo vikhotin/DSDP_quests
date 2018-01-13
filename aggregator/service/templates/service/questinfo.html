@@ -28,6 +28,7 @@
             </div>
         </div>
         <div class="row">
+            {% if guess != 'checking' %}
             <div class="col-sm-6">
                 <form class="form-signin" id="answer_form" method="post"
                       action="{% url 'service:quest' user.login quest.id %}">
@@ -39,6 +40,7 @@
                   <button class="btn btn-lg btn-primary btn-block" type="submit">Отправить</button>
                 </form>
             </div>
+            {% endif %}
         </div>
             {% if guess == 'checking' %}
             <br>

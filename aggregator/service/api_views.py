@@ -242,7 +242,7 @@ class NewQuestView(View):
             try:
                 resp = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(i, 1))  # TODO: random puzzle
             except requests.exceptions.ConnectionError:
-                return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
+                return JsonResponse({'error': 'Service currently unavailable'}, status=503)
             puzzles_ids.extend([int(resp.json()['id'])])
 
         # adding the quest
