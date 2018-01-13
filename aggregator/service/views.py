@@ -60,7 +60,21 @@ class UiUserQuestView(View):
 class UiPlaceInfoView(View):
     # see info about place - some fact
     def get(self, request, *args, **kwargs):
-        pass
+        user_login = kwargs.get('user_login')
+        quest_id = kwargs.get('quest_id')
+        place_id = kwargs.get('place_id')
+        fact_id = kwargs.get('fact_id')
+        res = requests.get(this_service_address + '/api/user/{}/quest/{}/place/{}/fact/{}/'.format(
+            user_login, quest_id, place_id, fact_id))
+        data = res.json()
+        if res.status_code == 200:
+            return render(request, 'service/placefact.html', data)
+        elif res.status_code == 404:
+            return render(request, 'service/404.html', data)
+        elif res.status_code == 503:
+            return render(request, 'service/503.html', data)
+        else:
+            return res
 
 
 class UiNewQuestView(View):
