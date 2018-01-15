@@ -1,5 +1,7 @@
+import requests
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.http import QueryDict
+from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 from pip import status_codes
@@ -66,3 +68,32 @@ class UserView(View):
             return JsonResponse(user_json, safe=False)
         else:
             return HttpResponse('', status=400)
+
+
+class LoginView(View):
+    # this method turns off csrf check
+    @csrf_exempt
+    def dispatch(self, request, *args, **kwargs):
+        return super(LoginView, self).dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        login = request.POST.get('login')
+        password = request.POST.get('password')
+        client_id = request.GET.get('clientId')
+        client_secret = request.GET.get("clientSecret")
+
+        try:
+            user_info = User.objects.get(login=login, password=password)
+        except User.DoesNotExist:
+            return HttpResponse('{}', content_type='application/json', status=404)
+
+        data = [
+            ('grant_type', 'password'),
+            ('username', 'admin'),
+            ('password', 'adminadmin'),
+            ('scope', 'read'),
+        ]
+
+        res = requests.post('http://localhost:8010/o/token/', data=data, auth=(client_id, client_secret))
+
+        return HttpResponse(res)
