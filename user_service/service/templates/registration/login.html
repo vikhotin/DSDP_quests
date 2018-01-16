@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Квесты</title>
+</head>
+<body>
+    <form class="form-login" id="login_form" method="post"
+          action="http://localhost:8010/user/login/?client_id={{client_id}}">
+    {% csrf_token %}
+    <h4>Введите логин и пароль</h4>
+    <input type="text" id="login" name="login" class="form-control input-sm chat-input" placeholder="логин" required/>
+    </br>
+    <input type="password" id="password" name="password" class="form-control input-sm chat-input" placeholder="пароль" required/>
+    </br>
+    <div class="wrapper">
+    <span class="group-btn">
+        <button type="submit">Войти</button>
+    </span>
+    </div>
+    </form>
+    <div class="row-fluid">
+    <p class="text-danger">{{ error }}</p>
+    </div>
+
+</body>
+</html>
