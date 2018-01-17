@@ -14,6 +14,7 @@ urlpatterns = [
     url('^user/(?P<user_login>.+)/place/(?P<place_id>[0-9]+)/fact/$', views.UiUserContributionFact.as_view()),
     url('^user/(?P<user_login>.+)/$', views.UiUserInfoView.as_view(), name='user'),
     url('^login/$', views.UiLoginView.as_view(), name='login'),
+    url('^refresh/', views.RefreshView.as_view(), name='refresh'),
     url('^oauth/', views.AuthView.as_view(), name='oauth'),
     url('^$', views.UiIndexView.as_view(), name='index'),
 ]

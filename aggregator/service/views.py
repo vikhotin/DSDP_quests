@@ -21,12 +21,20 @@ class UiUserInfoView(View):
     def get(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
         page = request.GET.get('page', 1)
-        res = requests.get(this_service_address + '/api/user/{}/?page={}'.format(user_login, page))
+        res = requests.get(this_service_address + '/api/user/{}/?page={}'.format(user_login, page),
+                           cookies=request.COOKIES)
+
+        if res.status_code == 401:
+            return HttpResponseRedirect('http://127.0.0.1:8000/')
+
         data = res.json()
+
         if res.status_code == 200:
             return render(request, 'service/userinfo.html', data)
         elif res.status_code == 404:
             return render(request, 'service/404.html', data)
+        elif res.status_code == 403:
+            return render(request, 'service/403.html', data)
         elif res.status_code == 503:
             return render(request, 'service/503.html', data)
         else:
@@ -38,7 +46,10 @@ class UiUserQuestView(View):
     def get(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
         quest_id = kwargs.get('quest_id')
-        res = requests.get(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id))
+        res = requests.get(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
+                           cookies=request.COOKIES)
+        if res.status_code == 401:
+            return HttpResponseRedirect('http://127.0.0.1:8000/')
         data = res.json()
         if res.status_code == 200:
             return render(request, 'service/questinfo.html', data)
@@ -55,7 +66,10 @@ class UiUserQuestView(View):
         quest_id = kwargs.get('quest_id')
         answer = request.POST.get('answer')
         res = requests.post(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
-                            data={'answer': answer})
+                            data={'answer': answer},
+                            cookies=request.COOKIES)
+        if res.status_code == 401:
+            return HttpResponseRedirect('http://127.0.0.1:8000/')
         data = res.json()
         if res.status_code == 200:
             return render(request, 'service/questinfo.html', data)
@@ -75,7 +89,10 @@ class UiPlaceInfoView(View):
         place_id = kwargs.get('place_id')
         fact_id = kwargs.get('fact_id')
         res = requests.get(this_service_address + '/api/user/{}/quest/{}/place/{}/fact/{}/'.format(
-            user_login, quest_id, place_id, fact_id))
+            user_login, quest_id, place_id, fact_id),
+                           cookies=request.COOKIES)
+        if res.status_code == 401:
+            return HttpResponseRedirect('http://127.0.0.1:8000/')
         data = res.json()
         if res.status_code == 200:
             return render(request, 'service/placefact.html', data)
@@ -91,7 +108,10 @@ class UiNewQuestView(View):
     # Create new quest
     def post(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
-        res = requests.post(this_service_address + '/api/user/{}/quest/'.format(user_login))
+        res = requests.post(this_service_address + '/api/user/{}/quest/'.format(user_login),
+                           cookies=request.COOKIES)
+        if res.status_code == 401:
+            return HttpResponseRedirect('http://127.0.0.1:8000/')
         if res.status_code == 201:
             return redirect('service:user', user_login)
         elif res.status_code == 404:
@@ -159,6 +179,29 @@ class AuthView(View):
         username = request.COOKIES.get('username')
         res1 = HttpResponseRedirect(reverse('service:user', args=[username]))
         # res1 = HttpResponse()
+        res1.set_cookie('access_token', res.json()['access_token'])
+        res1.set_cookie('refresh_token', res.json()['refresh_token'])
+
+        return res1
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class RefreshView(View):
+    def get(self, request, *args, **kwargs):
+        try:
+            res = requests.post('http://localhost:8010/o/token/?grant_type=refresh_token&client_id={}&'
+                                'client_secret={}&refresh_token={}&redirect_uri=http://localhost:8000/oauth/'.format(
+                                    client_id, client_secret, request.COOKIES['refresh_token']))
+            # res = requests.post('http://localhost:8010/o/token/',
+            #                     {'grant_type': 'refresh_token', 'refresh_token': request.COOKIES['refresh_token'],
+            #                      'redirect_uri': 'http://localhost:8000/oauth/'}, auth=(client_id, client_secret))
+        except requests.exceptions.ConnectionError:
+            data = res.json()
+            return render(request, 'service/503.html', data)
+        if res.status_code != 200:
+            return res
+
+        res1 = HttpResponse()
         res1.set_cookie('access_token', res.json()['access_token'])
         res1.set_cookie('refresh_token', res.json()['refresh_token'])
 

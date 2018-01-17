@@ -2,7 +2,7 @@ import requests
 import json
 import re
 from random import shuffle
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -14,11 +14,33 @@ places_service_address = 'http://127.0.0.1:8020'
 quests_service_address = 'http://127.0.0.1:8030'
 
 
+def has_access(request):
+    header = {'Authorization': 'Bearer ' + str(request.COOKIES.get('access_token'))}
+    resp = requests.get(user_service_address + '/user/check_rights/', headers=header)
+    if resp.status_code == 200:
+        return True
+    else:
+        return False
+
+
+def refresh(request):
+    res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
+    if res.status_code == 200:
+        return True
+    else:
+        return False
+
+
 class UserInfoView(View):
     # Get info about user, including his quests list
     @staticmethod
     def get(request, *args, **kwargs):
         user_login = kwargs.get('user_login')
+
+        if not has_access(request):
+            if not refresh(request):
+                return HttpResponse('{}', status=401, cookies=request.COOKIES)
+
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
         except requests.exceptions.ConnectionError:
@@ -47,6 +69,10 @@ class UserQuestView(View):
     def get(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
         quest_id = kwargs.get('quest_id')
+
+        if not has_access(request):
+            if not refresh(request):
+                return HttpResponse('{}', status=401, cookies=request.COOKIES)
 
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
@@ -95,6 +121,10 @@ class UserQuestView(View):
     def post(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
         quest_id = kwargs.get('quest_id')
+
+        if not has_access(request):
+            if not refresh(request):
+                return HttpResponse('{}', status=401, cookies=request.COOKIES)
 
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
@@ -149,6 +179,10 @@ class PlaceInfoView(View):
         place_id = kwargs.get('place_id')
         fact_id = kwargs.get('fact_id')
 
+        if not has_access(request):
+            if not refresh(request):
+                return HttpResponse('{}', status=401, cookies=request.COOKIES)
+
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
         except requests.exceptions.ConnectionError:
@@ -183,7 +217,7 @@ class PlaceInfoView(View):
         try:
             res2 = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(place_id, puzzle_id))
             if res2.status_code != 200:
-                    return HttpResponse(res2.text, status=500)
+                return HttpResponse(res2.text, status=500)
             place_from_puzzle = re.findall(r'\d+', res2.json()['place'])[0]
 
             res3 = requests.get(places_service_address + '/place/{}/'.format(place_id))
@@ -216,6 +250,10 @@ class NewQuestView(View):
     # Create new quest
     def post(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
+
+        if not has_access(request):
+            if not refresh(request):
+                return HttpResponse('{}', status=401, cookies=request.COOKIES)
 
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))

@@ -7,8 +7,15 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 
 from django.contrib.auth.models import User
+from oauth2_provider.decorators import protected_resource
+
 from .models import MyUser
 from .forms import UserForm
+
+
+@protected_resource()
+def check_rights(request):
+    return HttpResponse(status=200)
 
 
 class NewUserView(View):
