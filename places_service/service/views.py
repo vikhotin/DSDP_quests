@@ -3,9 +3,37 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 from django.core import serializers
+import binascii
+import os
+from django.utils import timezone
 
-from .models import Place, Fact, Puzzle
+from .models import Place, Fact, Puzzle, Token
 from .forms import PlaceForm, FactForm, PuzzleForm
+
+
+class TokenView(View):
+    def get(self, request, *args, **kwargs):
+        clientId = request.GET.get('clientId')
+        clientSecret = request.GET.get('clientSecret')
+        try:
+            tok = Token.objects.get(client_id=clientId, client_secret=clientSecret)
+        except Token.DoesNotExist:
+            return HttpResponse(status=403)
+        new_token = binascii.hexlify(os.urandom(15)).decode('ascii')
+        tok.token = new_token
+        tok.expires = timezone.now() + timezone.timedelta(minutes=30)
+        tok.save()
+        return JsonResponse({'token': new_token}, safe=False)
+
+
+def is_token_valid(token):
+    try:
+        tok = Token.objects.get(token=token)
+    except Token.DoesNotExist:
+        return False
+    if tok.expires < timezone.now():
+        return False
+    return True
 
 
 class PlacesView(View):
@@ -17,11 +45,17 @@ class PlacesView(View):
         return super(PlacesView, self).dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        token = str(request.META.get('HTTP_AUTHORIZATION')).split()[-1]
+        if not is_token_valid(token):
+            return HttpResponse('', status=401)
         place_info = Place.objects.all()
         place_json = serializers.serialize('json', place_info)
         return JsonResponse(place_json, safe=False)
 
     def post(self, request, *args, **kwargs):
+        token = str(request.META.get('HTTP_AUTHORIZATION')).split()[-1]
+        if not is_token_valid(token):
+            return HttpResponse('', status=401)
         form = PlaceForm(request.POST)
         if form.is_valid():
             form.save()
@@ -33,6 +67,9 @@ class PlacesView(View):
 
 class PlaceView(View):
     def get(self, request, place_id, *args, **kwargs):
+        token = str(request.META.get('HTTP_AUTHORIZATION')).split()[-1]
+        if not is_token_valid(token):
+            return HttpResponse('', status=401)
         try:
             place_info = Place.objects.get(id=place_id)
         except Place.DoesNotExist:
@@ -50,12 +87,18 @@ class FactsView(View):
         return super(FactsView, self).dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        token = str(request.META.get('HTTP_AUTHORIZATION')).split()[-1]
+        if not is_token_valid(token):
+            return HttpResponse('', status=401)
         place_id = kwargs['place_id']
         fact_info = Fact.objects.filter(place=place_id)
         fact_json = serializers.serialize('json', fact_info)
         return JsonResponse(fact_json, safe=False)
 
     def post(self, request, *args, **kwargs):
+        token = str(request.META.get('HTTP_AUTHORIZATION')).split()[-1]
+        if not is_token_valid(token):
+            return HttpResponse('', status=401)
         form = FactForm(request.POST)
         if form.is_valid():
             form.save()
@@ -67,6 +110,9 @@ class FactsView(View):
 
 class FactView(View):
     def get(self, request, fact_id, *args, **kwargs):
+        token = str(request.META.get('HTTP_AUTHORIZATION')).split()[-1]
+        if not is_token_valid(token):
+            return HttpResponse('', status=401)
         try:
             fact_info = Fact.objects.get(id=fact_id)
         except Fact.DoesNotExist:
@@ -84,12 +130,18 @@ class PuzzlesView(View):
         return super(PuzzlesView, self).dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        token = str(request.META.get('HTTP_AUTHORIZATION')).split()[-1]
+        if not is_token_valid(token):
+            return HttpResponse('', status=401)
         place_id = kwargs['place_id']
         puzzle_info = Puzzle.objects.filter(place=place_id)
         puzzle_json = serializers.serialize('json', puzzle_info)
         return JsonResponse(puzzle_json, safe=False)
 
     def post(self, request, *args, **kwargs):
+        token = str(request.META.get('HTTP_AUTHORIZATION')).split()[-1]
+        if not is_token_valid(token):
+            return HttpResponse('', status=401)
         form = PuzzleForm(request.POST)
         if form.is_valid():
             form.save()
@@ -102,6 +154,9 @@ class PuzzlesView(View):
 @method_decorator(csrf_exempt, name='dispatch')
 class PuzzleView(View):
     def get(self, request, puzzle_id, *args, **kwargs):
+        token = str(request.META.get('HTTP_AUTHORIZATION')).split()[-1]
+        if not is_token_valid(token):
+            return HttpResponse('', status=401)
         try:
             puzzle_info = Puzzle.objects.get(id=puzzle_id)
         except Puzzle.DoesNotExist:
@@ -111,6 +166,9 @@ class PuzzleView(View):
 
     # check if answer is correct
     def post(self, request, puzzle_id, *args, **kwargs):
+        token = str(request.META.get('HTTP_AUTHORIZATION')).split()[-1]
+        if not is_token_valid(token):
+            return HttpResponse('', status=401)
         try:
             puzzle_info = Puzzle.objects.get(id=puzzle_id)
         except Puzzle.DoesNotExist:

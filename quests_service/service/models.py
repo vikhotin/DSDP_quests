@@ -2,6 +2,13 @@ from django.db import models
 from django.contrib.postgres.fields import ArrayField
 
 
+class Token(models.Model):
+    client_id = models.CharField(max_length=40)
+    client_secret = models.CharField(max_length=128)
+    token = models.CharField(max_length=30, null=True)
+    expires = models.DateTimeField(null=True)
+
+
 class Quest(models.Model):
     user_id = models.IntegerField()
     places_ids = ArrayField(models.IntegerField())
