@@ -21,10 +21,6 @@ class ServiceAccess:
         self.appId = appId
         self.appSecret = appSecret
 
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__,
-                          sort_keys=True, indent=4)
-
 
 places_access = ServiceAccess(
     appId='sfFPdNk3trL1CPI42vSx2t4QbCAjgdrn9XyFnmDl',
@@ -45,14 +41,6 @@ def has_access(request):
         return False
 
 
-def refresh(request):
-    res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
-    if res.status_code == 200:
-        return True
-    else:
-        return False
-
-
 class UserInfoView(View):
     # Get info about user, including his quests list
     @staticmethod
@@ -60,8 +48,7 @@ class UserInfoView(View):
         user_login = kwargs.get('user_login')
 
         if not has_access(request):
-            if not refresh(request):
-                return HttpResponse('{}', status=401)
+            return HttpResponse('{}', status=401)
 
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
@@ -105,8 +92,7 @@ class UserQuestView(View):
         quest_id = kwargs.get('quest_id')
 
         if not has_access(request):
-            if not refresh(request):
-                return HttpResponse('{}', status=401)
+            return HttpResponse('{}', status=401)
 
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
@@ -181,8 +167,7 @@ class UserQuestView(View):
         quest_id = kwargs.get('quest_id')
 
         if not has_access(request):
-            if not refresh(request):
-                return HttpResponse('{}', status=401)
+            return HttpResponse('{}', status=401)
 
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
@@ -252,8 +237,7 @@ class PlaceInfoView(View):
         fact_id = kwargs.get('fact_id')
 
         if not has_access(request):
-            if not refresh(request):
-                return HttpResponse('{}', status=401)
+            return HttpResponse('{}', status=401)
 
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))
@@ -370,8 +354,7 @@ class NewQuestView(View):
         user_login = kwargs.get('user_login')
 
         if not has_access(request):
-            if not refresh(request):
-                return HttpResponse('{}', status=401)
+            return HttpResponse('{}', status=401)
 
         try:
             res = requests.get(user_service_address + '/user/{}/'.format(user_login))

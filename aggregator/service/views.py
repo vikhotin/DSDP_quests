@@ -23,22 +23,34 @@ class UiUserInfoView(View):
         page = request.GET.get('page', 1)
         res = requests.get(this_service_address + '/api/user/{}/?page={}'.format(user_login, page),
                            cookies=request.COOKIES)
-
         if res.status_code == 401:
-            return HttpResponseRedirect('http://127.0.0.1:8000/')
+            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
+            if res.status_code != 200:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+            request.COOKIES['access_token'] = res.cookies.get('access_token')
+            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
+            res = requests.get(this_service_address + '/api/user/{}/?page={}'.format(user_login, page),
+                               cookies=request.COOKIES)
+            if res.status_code == 401:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
 
         data = res.json()
 
         if res.status_code == 200:
-            return render(request, 'service/userinfo.html', data)
+            result = render(request, 'service/userinfo.html', data)
         elif res.status_code == 404:
-            return render(request, 'service/404.html', data)
+            result = render(request, 'service/404.html', data)
         elif res.status_code == 403:
-            return render(request, 'service/403.html', data)
+            result = render(request, 'service/403.html', data)
         elif res.status_code == 503:
-            return render(request, 'service/503.html', data)
+            result = render(request, 'service/503.html', data)
         else:
-            return res
+            result = res
+
+        result.set_cookie('access_token', request.COOKIES['access_token'])
+        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
+
+        return result
 
 
 class UiUserQuestView(View):
@@ -49,16 +61,30 @@ class UiUserQuestView(View):
         res = requests.get(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
                            cookies=request.COOKIES)
         if res.status_code == 401:
-            return HttpResponseRedirect('http://127.0.0.1:8000/')
+            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
+            if res.status_code != 200:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+            request.COOKIES['access_token'] = res.cookies.get('access_token')
+            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
+            res = requests.get(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
+                               cookies=request.COOKIES)
+            if res.status_code == 401:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+
         data = res.json()
         if res.status_code == 200:
-            return render(request, 'service/questinfo.html', data)
+            result = render(request, 'service/questinfo.html', data)
         elif res.status_code == 404:
-            return render(request, 'service/404.html', data)
+            result = render(request, 'service/404.html', data)
         elif res.status_code == 503:
-            return render(request, 'service/503.html', data)
+            result = render(request, 'service/503.html', data)
         else:
-            return res
+            result = res
+
+        result.set_cookie('access_token', request.COOKIES['access_token'])
+        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
+
+        return result
 
     # Post user's answer - check if correct
     def post(self, request, *args, **kwargs):
@@ -69,17 +95,31 @@ class UiUserQuestView(View):
                             data={'answer': answer},
                             cookies=request.COOKIES)
         if res.status_code == 401:
-            return HttpResponseRedirect('http://127.0.0.1:8000/')
+            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
+            if res.status_code != 200:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+            request.COOKIES['access_token'] = res.cookies.get('access_token')
+            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
+            res = requests.post(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
+                                data={'answer': answer},
+                                cookies=request.COOKIES)
+            if res.status_code == 401:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+
         data = res.json()
         if res.status_code == 200:
-            return render(request, 'service/questinfo.html', data)
+            result = render(request, 'service/questinfo.html', data)
         elif res.status_code == 404:
-            return render(request, 'service/404.html', data)
+            result = render(request, 'service/404.html', data)
         elif res.status_code == 503:
-            return render(request, 'service/503.html', data)
+            result = render(request, 'service/503.html', data)
         else:
-            return res
+            result = res
 
+        result.set_cookie('access_token', request.COOKIES['access_token'])
+        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
+
+        return result
 
 class UiPlaceInfoView(View):
     # see info about place - some fact
@@ -89,19 +129,31 @@ class UiPlaceInfoView(View):
         place_id = kwargs.get('place_id')
         fact_id = kwargs.get('fact_id')
         res = requests.get(this_service_address + '/api/user/{}/quest/{}/place/{}/fact/{}/'.format(
-            user_login, quest_id, place_id, fact_id),
-                           cookies=request.COOKIES)
+            user_login, quest_id, place_id, fact_id), cookies=request.COOKIES)
         if res.status_code == 401:
-            return HttpResponseRedirect('http://127.0.0.1:8000/')
+            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
+            if res.status_code != 200:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+            request.COOKIES['access_token'] = res.cookies.get('access_token')
+            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
+            res = requests.get(this_service_address + '/api/user/{}/quest/{}/place/{}/fact/{}/'.format(
+                user_login, quest_id, place_id, fact_id), cookies=request.COOKIES)
+            if res.status_code == 401:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
         data = res.json()
         if res.status_code == 200:
-            return render(request, 'service/placefact.html', data)
+            result = render(request, 'service/placefact.html', data)
         elif res.status_code == 404:
-            return render(request, 'service/404.html', data)
+            result = render(request, 'service/404.html', data)
         elif res.status_code == 503:
-            return render(request, 'service/503.html', data)
+            result = render(request, 'service/503.html', data)
         else:
-            return res
+            result = res
+
+        result.set_cookie('access_token', request.COOKIES['access_token'])
+        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
+
+        return result
 
 
 class UiNewQuestView(View):
@@ -109,19 +161,32 @@ class UiNewQuestView(View):
     def post(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
         res = requests.post(this_service_address + '/api/user/{}/quest/'.format(user_login),
-                           cookies=request.COOKIES)
+                            cookies=request.COOKIES)
         if res.status_code == 401:
-            return HttpResponseRedirect('http://127.0.0.1:8000/')
+            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
+            if res.status_code != 200:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+            request.COOKIES['access_token'] = res.cookies.get('access_token')
+            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
+            res = requests.post(this_service_address + '/api/user/{}/quest/'.format(user_login),
+                                cookies=request.COOKIES)
+        if res.status_code == 401:
+            result = HttpResponseRedirect('http://127.0.0.1:8000/')
         if res.status_code == 201:
-            return redirect('service:user', user_login)
+            result = redirect('service:user', user_login)
         elif res.status_code == 404:
             data = res.json()
-            return render(request, 'service/404.html', data)
+            result = render(request, 'service/404.html', data)
         elif res.status_code == 503:
             data = res.json()
-            return render(request, 'service/503.html', data)
+            result = render(request, 'service/503.html', data)
         else:
-            return res
+            result = res
+
+        result.set_cookie('access_token', request.COOKIES['access_token'])
+        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
+
+        return result
 
 
 class UiUserContributionPuzzle(View):
@@ -148,19 +213,6 @@ class UiLoginView(View):
 
     def post(self, request, *args, **kwargs):
         pass
-        '''
-        try:
-            res = requests.post(user_service_address + '/user/login/?clientId={}&clientSecret={}'
-                                .format(clientId, clientSecret), request.POST)
-        except requests.exceptions.ConnectionError:
-            return render(request, 'service/login.html', {'error': 'Service currently unavailable'}, status=503)
-
-        if res.status_code == 404:
-            return render(request, 'service/login.html', {'error': 'Неверно введен логин или пароль'})
-        else:
-            # redo
-            return HttpResponse(res)
-        '''
 
 
 @method_decorator(csrf_exempt, name='dispatch')
