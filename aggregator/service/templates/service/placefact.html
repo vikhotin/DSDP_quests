@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Квесты</title>
+    <script src="/static/jquery/dist/jquery.js"></script>
+    <script type="text/javascript" src="/static/bootstrap/dist/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/static/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/bootstrap/dist/css/bootstrap-theme.min.css">
+    <style>
+        body {
+            background-image: linear-gradient(to right, yellowgreen, lightskyblue);
+        }
+    </style>
+    </head>
+<body>
+    <h1 class="text-center">{{ user.name }}</h1>
+    <h4 class="text-center" style="color:grey">(@{{ user.login }})</h4>
+    <div class="container">
+        <div class="row">
+            <h4>Квест №{{ quest.id }}</h4>
+        </div>
+        <div class="row">
+            <h4>Место: {{ place.name }}</h4>
+        </div>
+        <div class="row">
+            <h4>Интересный факт:</h4>
+            <br>
+            <div class="col-sm-12">
+                {{ puzzle.text }}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

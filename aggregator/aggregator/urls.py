@@ -18,5 +18,6 @@ from django.conf.urls import url, include
 
 urlpatterns = [
     url(r'^', include('service.urls')),
+    url(r'^api/', include('service.api_urls')),
     url(r'^admin/', admin.site.urls),
 ]

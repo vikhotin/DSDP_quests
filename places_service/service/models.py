@@ -1,6 +1,13 @@
 from django.db import models
 
 
+class Token(models.Model):
+    client_id = models.CharField(max_length=40)
+    client_secret = models.CharField(max_length=128)
+    token = models.CharField(max_length=30, null=True)
+    expires = models.DateTimeField(null=True)
+
+
 # Place in city model
 class Place(models.Model):
     name = models.CharField(max_length=100)

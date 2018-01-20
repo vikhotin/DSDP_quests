@@ -4,6 +4,8 @@ from . import views
 
 
 urlpatterns = [
+    url(r'^token/$', views.TokenView.as_view()),
+
     url(r'^place/$', views.PlacesView.as_view()),
     url(r'^place/(?P<place_id>[0-9]+)/$', views.PlaceView.as_view()),
 

@@ -1,146 +1,155 @@
 import requests
 import json
-import re
-from random import shuffle
-from django.http import JsonResponse, HttpResponse
+
+from django.http import HttpResponseRedirect, HttpResponse
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 
-from aggregator.celery import task_check_user_answer
+this_service_address = 'http://127.0.0.1:8000'
 
 user_service_address = 'http://127.0.0.1:8010'
-places_service_address = 'http://127.0.0.1:8020'
-quests_service_address = 'http://127.0.0.1:8030'
+
+client_id = 'we3iHS6Z8cfj7CDypvBLhNDtQHrsgjS1HSw5CGFm'
+client_secret = 'KyIeQtuXyN2Vc4VMSTAXzuoNebNnk6UAWkcekE5P9wscnPM2EAa0TyZxSZDWc6PH6A179t3fDNXdICLUsBooXF4gmmRqWjixf6pvy3imF6bz3GuEHj9sXDKnjHMrOb8S'
 
 
-class UserInfoView(View):
+class UiUserInfoView(View):
     # Get info about user, including his quests list
-    @staticmethod
-    def get(request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
-        try:
-            res = requests.get(user_service_address + '/user/{}/'.format(user_login))
-        except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
-        if res.status_code != 200:
-            return HttpResponse(res.text, status=res.status_code)
+        page = request.GET.get('page', 1)
 
-        user_json = res.json()
-        user_id = user_json['id']
-        page = request.GET.get('page', 0)
+        data = {
+            'username': user_login,
+            'token': request.COOKIES['uid_token']
+        }
+        res = requests.post('http://localhost:8010/user/token_check/', data=data)
+        if res.status_code == 401:
+            return HttpResponseRedirect(reverse('service:index'))
 
-        try:
-            res1 = requests.get(quests_service_address + '/user/{}/quests/?page={}'.format(user_id, page))
-            if res1.status_code == 200:
-                user_json['quests'] = json.loads(res1.json())
-        except requests.exceptions.ConnectionError:
-            user_json['quests'] = 'Quests currently unavailable'
+        res = requests.get(this_service_address + '/api/user/{}/?page={}'.format(user_login, page),
+                           cookies=request.COOKIES)
+        if res.status_code == 401:
+            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
+            if res.status_code != 200:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+            request.COOKIES['access_token'] = res.cookies.get('access_token')
+            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
+            res = requests.get(this_service_address + '/api/user/{}/?page={}'.format(user_login, page),
+                               cookies=request.COOKIES)
+            if res.status_code == 401:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
 
-        return JsonResponse(user_json)
+        data = res.json()
+
+        if res.status_code == 200:
+            result = render(request, 'service/userinfo.html', data)
+        elif res.status_code == 404:
+            result = render(request, 'service/404.html', data)
+        elif res.status_code == 403:
+            result = render(request, 'service/403.html', data)
+        elif res.status_code == 503:
+            result = render(request, 'service/503.html', data)
+        else:
+            result = res
+
+        result.set_cookie('access_token', request.COOKIES['access_token'])
+        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
+
+        return result
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class UserQuestView(View):
+class UiUserQuestView(View):
     # Get user's quest - progress
     def get(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
         quest_id = kwargs.get('quest_id')
 
-        try:
-            res = requests.get(user_service_address + '/user/{}/'.format(user_login))
-        except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
-        if res.status_code != 200:
-            return HttpResponse(res.text, status=res.status_code)
-        user_json = res.json()
-        user_id = user_json['id']
-
-        try:
-            res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
-        except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
-        if res1.status_code != 200:
-            return HttpResponse(res1.text, status=res1.status_code)
-        quest_json = res1.json()
-        quest_user_id = quest_json['user_id']
-
-        if user_id != quest_user_id:
-            return HttpResponse("User doesn't have this quest", status=404)
-
-        cur_task = int(quest_json['cur_task'])
-        # places_ids = quest_json['places_ids']
-        puzzles_ids = json.loads(quest_json['puzzles_ids'])
-        places_ids = json.loads(quest_json['places_ids'])
-
-        puzzle_id = int(puzzles_ids[cur_task - 1])
-        place_id = int(places_ids[cur_task - 1])
-        try:
-            res2 = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(place_id, puzzle_id))
-        except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
-        if res2.status_code != 200:
-            return HttpResponse(res2.text, status=500)
-
-        result = {
-            'user': res.json(),
-            'quest': res1.json(),
-            'puzzle': res2.json(),
+        data = {
+            'username': user_login,
+            'token': request.COOKIES['uid_token']
         }
+        res = requests.post('http://localhost:8010/user/token_check/', data=data)
+        if res.status_code == 401:
+            return HttpResponseRedirect(reverse('service:index'))
 
-        return JsonResponse(result)
+        res = requests.get(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
+                           cookies=request.COOKIES)
+        if res.status_code == 401:
+            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
+            if res.status_code != 200:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+            request.COOKIES['access_token'] = res.cookies.get('access_token')
+            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
+            res = requests.get(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
+                               cookies=request.COOKIES)
+            if res.status_code == 401:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+
+        data = res.json()
+        if res.status_code == 200:
+            result = render(request, 'service/questinfo.html', data)
+        elif res.status_code == 404:
+            result = render(request, 'service/404.html', data)
+        elif res.status_code == 503:
+            result = render(request, 'service/503.html', data)
+        else:
+            result = res
+
+        result.set_cookie('access_token', request.COOKIES['access_token'])
+        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
+
+        return result
 
     # Post user's answer - check if correct
     def post(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
         quest_id = kwargs.get('quest_id')
+        answer = request.POST.get('answer')
 
-        try:
-            res = requests.get(user_service_address + '/user/{}/'.format(user_login))
-        except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
-        if res.status_code != 200:
-            return HttpResponse(res.text, status=res.status_code)
-        user_json = res.json()
-        user_id = user_json['id']
-
-        try:
-            res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
-        except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
-        if res1.status_code != 200:
-            return HttpResponse(res1.text, status=res1.status_code)
-        quest_json = res1.json()
-        quest_user_id = quest_json['user_id']
-
-        if user_id != quest_user_id:
-            return HttpResponse("User doesn't have this quest", status=404)
-
-        if quest_json['completed'] == 'True':
-            return HttpResponse('User has finished this quest')
-
-        result = {
-            'user': res.json(),
-            'quest': res1.json(),
+        data = {
+            'username': user_login,
+            'token': request.COOKIES['uid_token']
         }
+        res = requests.post('http://localhost:8010/user/token_check/', data=data)
+        if res.status_code == 401:
+            return HttpResponseRedirect(reverse('service:index'))
 
-        cur_task = int(quest_json['cur_task'])
-        puzzles_ids = json.loads(quest_json['puzzles_ids'])
-        places_ids = json.loads(quest_json['places_ids'])
+        res = requests.post(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
+                            data={'answer': answer},
+                            cookies=request.COOKIES)
+        if res.status_code == 401:
+            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
+            if res.status_code != 200:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+            request.COOKIES['access_token'] = res.cookies.get('access_token')
+            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
+            res = requests.post(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
+                                data={'answer': answer},
+                                cookies=request.COOKIES)
+            if res.status_code == 401:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
 
-        puzzle_id = int(puzzles_ids[cur_task - 1])
-        place_id = int(places_ids[cur_task - 1])
+        data = res.json()
+        if res.status_code == 200:
+            result = render(request, 'service/questinfo.html', data)
+        elif res.status_code == 404:
+            result = render(request, 'service/404.html', data)
+        elif res.status_code == 503:
+            result = render(request, 'service/503.html', data)
+        else:
+            result = res
 
-        user_answer = request.POST['answer']
+        result.set_cookie('access_token', request.COOKIES['access_token'])
+        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
 
-        task_check_user_answer.delay(puzzle_id, place_id, quest_id, user_login, user_answer)
-
-        result['guess'] = 'checking'
-
-        return JsonResponse(result)
+        return result
 
 
-class PlaceInfoView(View):
+class UiPlaceInfoView(View):
     # see info about place - some fact
     def get(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
@@ -148,143 +157,168 @@ class PlaceInfoView(View):
         place_id = kwargs.get('place_id')
         fact_id = kwargs.get('fact_id')
 
-        try:
-            res = requests.get(user_service_address + '/user/{}/'.format(user_login))
-        except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
-        if res.status_code != 200:
-            return HttpResponse(res.text, status=res.status_code)
-        user_json = res.json()
-        user_id = user_json['id']
-
-        try:
-            res1 = requests.get(quests_service_address + '/quest/{}/'.format(quest_id))
-        except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
-        if res1.status_code != 200:
-            return HttpResponse(res1.text, status=res1.status_code)
-        quest_json = res1.json()
-        quest_user_id = quest_json['user_id']
-
-        if user_id != quest_user_id:
-            return HttpResponse("User doesn't have this quest", status=404)
-
-        result = {
-            'user': res.json(),
-            'quest': res1.json(),
+        data = {
+            'username': user_login,
+            'token': request.COOKIES['uid_token']
         }
+        res = requests.post('http://localhost:8010/user/token_check/', data=data)
+        if res.status_code == 401:
+            return HttpResponseRedirect(reverse('service:index'))
 
-        cur_task = int(quest_json['cur_task'])
-        # places_ids = quest_json['places_ids']
-        puzzles_ids = json.loads(quest_json['puzzles_ids'])
-
-        puzzle_id = int(puzzles_ids[cur_task - 1])
-        try:
-            res2 = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(place_id, puzzle_id))
-            if res2.status_code != 200:
-                    return HttpResponse(res2.text, status=500)
-            place_from_puzzle = re.findall(r'\d+', res2.json()['place'])[0]
-
-            res3 = requests.get(places_service_address + '/place/{}/'.format(place_id))
-            if res3.status_code != 200:
-                return HttpResponse(res3.text, status=404)
-
-            res4 = requests.get(places_service_address + '/place/{}/fact/{}/'.format(place_id, fact_id))
-            if res4.status_code != 200:
-                return HttpResponse(res4.text, status=404)
-            place_from_fact = re.findall(r'\d+', res4.json()['place'])[0]
-
-            if not (place_from_puzzle == place_id == place_from_fact):
-                return HttpResponse('', status=400)
-        except requests.exceptions.ConnectionError:
-            result['puzzle'] = 'Unknown'
-            result['place'] = 'Unknown'
-            result['fact'] = 'Unknown'
+        res = requests.get(this_service_address + '/api/user/{}/quest/{}/place/{}/fact/{}/'.format(
+            user_login, quest_id, place_id, fact_id), cookies=request.COOKIES)
+        if res.status_code == 401:
+            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
+            if res.status_code != 200:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+            request.COOKIES['access_token'] = res.cookies.get('access_token')
+            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
+            res = requests.get(this_service_address + '/api/user/{}/quest/{}/place/{}/fact/{}/'.format(
+                user_login, quest_id, place_id, fact_id), cookies=request.COOKIES)
+            if res.status_code == 401:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+        data = res.json()
+        if res.status_code == 200:
+            result = render(request, 'service/placefact.html', data)
+        elif res.status_code == 404:
+            result = render(request, 'service/404.html', data)
+        elif res.status_code == 503:
+            result = render(request, 'service/503.html', data)
         else:
-            result['puzzle'] = res2.json()
-            result['place'] = res3.json()
-            result['fact'] = res4.json()
+            result = res
 
-        return JsonResponse(result)
+        result.set_cookie('access_token', request.COOKIES['access_token'])
+        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
+
+        return result
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class NewQuestView(View):
-    http_method_names = ['post']
-
+class UiNewQuestView(View):
     # Create new quest
     def post(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
 
-        try:
-            res = requests.get(user_service_address + '/user/{}/'.format(user_login))
-        except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
-        if res.status_code != 200:
-            return HttpResponse(res.text, status=res.status_code)
-        user_json = res.json()
-        user_id = user_json['id']
+        data = {
+            'username': user_login,
+            'token': request.COOKIES['uid_token']
+        }
+        res = requests.post('http://localhost:8010/user/token_check/', data=data)
+        if res.status_code == 401:
+            return HttpResponseRedirect(reverse('service:index'))
 
-        try:
-            res2 = requests.get(places_service_address + '/place/')
-        except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
-        if res2.status_code != 200:
-            return HttpResponse(res2.text, status=res2.status_code)
-
-        places_json = res2.json()
-        places_ids = [i['pk'] for i in json.loads(places_json)]
-        shuffle(places_ids)
-
-        puzzles_ids = []
-        for i in places_ids:
-            try:
-                resp = requests.get(places_service_address + '/place/{}/puzzle/{}/'.format(i, 1))  # TODO: random puzzle
-            except requests.exceptions.ConnectionError:
-                return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
-            puzzles_ids.extend([int(resp.json()['id'])])
-
-        # adding the quest
-        # increase number of user's quests
-        try:
-            res3 = requests.put(user_service_address + '/user/{}/'.format(user_login),
-                                {'inc': 'quests_number'})
-        except requests.exceptions.ConnectionError:
-            return HttpResponse("{'error': 'Service currently unavailable'}", status=503)
-        if res3.status_code != 200:
-            return HttpResponse(res3.text, status=res3.status_code)
+        res = requests.post(this_service_address + '/api/user/{}/quest/'.format(user_login),
+                            cookies=request.COOKIES)
+        if res.status_code == 401:
+            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
+            if res.status_code != 200:
+                return HttpResponseRedirect('http://127.0.0.1:8000/')
+            request.COOKIES['access_token'] = res.cookies.get('access_token')
+            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
+            res = requests.post(this_service_address + '/api/user/{}/quest/'.format(user_login),
+                                cookies=request.COOKIES)
+        if res.status_code == 401:
+            result = HttpResponseRedirect('http://127.0.0.1:8000/')
+        if res.status_code == 201:
+            result = redirect('service:user', user_login)
+        elif res.status_code == 404:
+            data = res.json()
+            result = render(request, 'service/404.html', data)
+        elif res.status_code == 503:
+            data = res.json()
+            result = render(request, 'service/503.html', data)
         else:
-            try:
-                res1 = requests.post(quests_service_address + '/quest/', {
-                    "user_id": str(user_id),
-                    "places_ids": str(places_ids)[1:-1],
-                    "puzzles_ids": str(puzzles_ids)[1:-1],
-                    "cur_task": str(1),
-                    "completed": "False",
-                })
-                if res1.status_code != 201:
-                    return HttpResponse(res1.text, status=res1.status_code)
-                else:
-                    return HttpResponse(status=201)
-            except requests.exceptions.ConnectionError:
-                # rollback
-                try:
-                    res3 = requests.put(user_service_address + '/user/{}/'.format(user_login),
-                                        {'dec': 'quests_number'})
-                except requests.exceptions.ConnectionError:
-                    return HttpResponse("{'error': 'Fatal error: data might be inconsistent'}", status=503)
-                if res3.status_code != 200:
-                    return HttpResponse(res3.text, status=res3.status_code)
-                else:
-                    return HttpResponse("{'error': 'Quest currently cannot be added due to a server problem. "
-                                        "Try again later'}", status=503)
+            result = res
+
+        result.set_cookie('access_token', request.COOKIES['access_token'])
+        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
+
+        return result
 
 
-class UserContributionPuzzle(View):
+class UiUserContributionPuzzle(View):
     # todo in future
     pass
 
 
-class UserContributionFact(View):
+class UiUserContributionFact(View):
     # todo in future
     pass
+
+
+class UiIndexView(View):
+    def get(self, request, *args, **kwargs):
+        return render(request, 'service/index.html')
+
+
+class UiLoginView(View):
+    def get(self, request, *args, **kwargs):
+        return render(request, 'service/login.html')
+
+    def post(self, request, *args, **kwargs):
+        data = {
+            "username": request.POST['login'],
+            "password": request.POST['password'],
+        }
+        res = requests.post('http://localhost:8010/user/token/', data=data)
+        if res.status_code == 403:
+            return render(request, 'service/login.html', {'error': 'Неверный логин или пароль'})
+        else:
+            resp = render(request, 'service/login_ok.html')
+            resp.set_cookie('uid_token', res.json()['token'])
+            return resp
+
+
+class ApiLoginView(View):
+    def get(self, request, *args, **kwargs):
+        # return render(request, 'service/login.html')
+        return HttpResponseRedirect('http://localhost:8010/o/authorize/?response_type=code&'
+                                    'client_id={}&redirect_uri=http://localhost:8000/oauth/'.format(
+                                        client_id))
+
+    def post(self, request, *args, **kwargs):
+        pass
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class AuthView(View):
+    def get(self, request, *args, **kwargs):
+        code = request.GET.get('code')
+        try:
+            res = requests.post('http://localhost:8010/o/token/',
+                                {'grant_type': 'authorization_code', 'code': code, 'redirect_uri': 'http://localhost:8000/oauth/'}, auth=(client_id, client_secret))
+        except requests.exceptions.ConnectionError:
+            data = res.json()
+            return render(request, 'service/503.html', data)
+        if res.status_code != 200:
+            return res
+
+        username = request.COOKIES.get('username')
+        res1 = HttpResponseRedirect(reverse('service:user', args=[username]))
+        # res1 = HttpResponse()
+        res1.set_cookie('access_token', res.json()['access_token'])
+        res1.set_cookie('refresh_token', res.json()['refresh_token'])
+
+        return res1
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class RefreshView(View):
+    def get(self, request, *args, **kwargs):
+        try:
+            res = requests.post('http://localhost:8010/o/token/?grant_type=refresh_token&client_id={}&'
+                                'client_secret={}&refresh_token={}&redirect_uri=http://localhost:8000/oauth/'.format(
+                                    client_id, client_secret, request.COOKIES['refresh_token']))
+            # res = requests.post('http://localhost:8010/o/token/',
+            #                     {'grant_type': 'refresh_token', 'refresh_token': request.COOKIES['refresh_token'],
+            #                      'redirect_uri': 'http://localhost:8000/oauth/'}, auth=(client_id, client_secret))
+        except requests.exceptions.ConnectionError:
+            data = res.json()
+            return render(request, 'service/503.html', data)
+        if res.status_code != 200:
+            return res
+
+        res1 = HttpResponse()
+        res1.set_cookie('access_token', res.json()['access_token'])
+        res1.set_cookie('refresh_token', res.json()['refresh_token'])
+
+        return res1
