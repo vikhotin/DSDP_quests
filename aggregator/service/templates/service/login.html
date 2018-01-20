@@ -18,7 +18,7 @@
        <div class="row-fluid">
             <div class="centering text-center">
                 <div class="col-md-offset-5 col-md-3">
-                    <form class="form-login" id="login_form" method="post" action="{% url 'service:login' %}">
+                    <form class="form-login" id="login_form" method="post" action="{% url 'service:login_ui' %}">
                     {% csrf_token %}
                     <h4>Введите логин и пароль</h4>
                     <input type="text" id="login" name="login" class="form-control input-sm chat-input" placeholder="логин" required/>

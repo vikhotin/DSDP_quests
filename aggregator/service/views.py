@@ -21,6 +21,15 @@ class UiUserInfoView(View):
     def get(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
         page = request.GET.get('page', 1)
+
+        data = {
+            'username': user_login,
+            'token': request.COOKIES['uid_token']
+        }
+        res = requests.post('http://localhost:8010/user/token_check/', data=data)
+        if res.status_code == 401:
+            return HttpResponseRedirect(reverse('service:index'))
+
         res = requests.get(this_service_address + '/api/user/{}/?page={}'.format(user_login, page),
                            cookies=request.COOKIES)
         if res.status_code == 401:
@@ -58,6 +67,15 @@ class UiUserQuestView(View):
     def get(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
         quest_id = kwargs.get('quest_id')
+
+        data = {
+            'username': user_login,
+            'token': request.COOKIES['uid_token']
+        }
+        res = requests.post('http://localhost:8010/user/token_check/', data=data)
+        if res.status_code == 401:
+            return HttpResponseRedirect(reverse('service:index'))
+
         res = requests.get(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
                            cookies=request.COOKIES)
         if res.status_code == 401:
@@ -91,6 +109,15 @@ class UiUserQuestView(View):
         user_login = kwargs.get('user_login')
         quest_id = kwargs.get('quest_id')
         answer = request.POST.get('answer')
+
+        data = {
+            'username': user_login,
+            'token': request.COOKIES['uid_token']
+        }
+        res = requests.post('http://localhost:8010/user/token_check/', data=data)
+        if res.status_code == 401:
+            return HttpResponseRedirect(reverse('service:index'))
+
         res = requests.post(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
                             data={'answer': answer},
                             cookies=request.COOKIES)
@@ -121,6 +148,7 @@ class UiUserQuestView(View):
 
         return result
 
+
 class UiPlaceInfoView(View):
     # see info about place - some fact
     def get(self, request, *args, **kwargs):
@@ -128,6 +156,15 @@ class UiPlaceInfoView(View):
         quest_id = kwargs.get('quest_id')
         place_id = kwargs.get('place_id')
         fact_id = kwargs.get('fact_id')
+
+        data = {
+            'username': user_login,
+            'token': request.COOKIES['uid_token']
+        }
+        res = requests.post('http://localhost:8010/user/token_check/', data=data)
+        if res.status_code == 401:
+            return HttpResponseRedirect(reverse('service:index'))
+
         res = requests.get(this_service_address + '/api/user/{}/quest/{}/place/{}/fact/{}/'.format(
             user_login, quest_id, place_id, fact_id), cookies=request.COOKIES)
         if res.status_code == 401:
@@ -160,6 +197,15 @@ class UiNewQuestView(View):
     # Create new quest
     def post(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
+
+        data = {
+            'username': user_login,
+            'token': request.COOKIES['uid_token']
+        }
+        res = requests.post('http://localhost:8010/user/token_check/', data=data)
+        if res.status_code == 401:
+            return HttpResponseRedirect(reverse('service:index'))
+
         res = requests.post(this_service_address + '/api/user/{}/quest/'.format(user_login),
                             cookies=request.COOKIES)
         if res.status_code == 401:
@@ -205,6 +251,24 @@ class UiIndexView(View):
 
 
 class UiLoginView(View):
+    def get(self, request, *args, **kwargs):
+        return render(request, 'service/login.html')
+
+    def post(self, request, *args, **kwargs):
+        data = {
+            "username": request.POST['login'],
+            "password": request.POST['password'],
+        }
+        res = requests.post('http://localhost:8010/user/token/', data=data)
+        if res.status_code == 403:
+            return render(request, 'service/login.html', {'error': 'Неверный логин или пароль'})
+        else:
+            resp = render(request, 'service/login_ok.html')
+            resp.set_cookie('uid_token', res.json()['token'])
+            return resp
+
+
+class ApiLoginView(View):
     def get(self, request, *args, **kwargs):
         # return render(request, 'service/login.html')
         return HttpResponseRedirect('http://localhost:8010/o/authorize/?response_type=code&'

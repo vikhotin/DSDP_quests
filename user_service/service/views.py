@@ -6,16 +6,68 @@ from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 
+import binascii
+import os
+from django.utils import timezone
+
 from django.contrib.auth.models import User
 from oauth2_provider.decorators import protected_resource
 
-from .models import MyUser
+from .models import MyUser, Token
 from .forms import UserForm
 
 
 @protected_resource()
 def check_rights(request):
     return HttpResponse(status=200)
+
+
+class TokenView(View):
+    http_method_names = ['post']
+
+    # this method turns off csrf check
+    @csrf_exempt
+    def dispatch(self, request, *args, **kwargs):
+        return super(TokenView, self).dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        username = request.POST['username']
+        password = request.POST['password']
+        user = authenticate(username=username, password=password)
+        if user is None:
+            return HttpResponse(status=403)
+        else:
+            new_token = binascii.hexlify(os.urandom(15)).decode('ascii')
+            tok = Token()
+            tok.username = username
+            tok.token = new_token
+            tok.expires = timezone.now() + timezone.timedelta(minutes=30)
+            tok.save()
+            return JsonResponse({'token': new_token}, safe=False)
+
+
+class TokenCheckView(View):
+    http_method_names = ['post']
+
+    # this method turns off csrf check
+    @csrf_exempt
+    def dispatch(self, request, *args, **kwargs):
+        return super(TokenCheckView, self).dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        username = request.POST['username']
+        token = request.POST['token']
+        try:
+            tok = Token.objects.get(token=token, username=username)
+        except Token.DoesNotExist:
+            return HttpResponse(status=401)
+        if tok.expires < timezone.now():
+            res = HttpResponse(status=401)
+        else:
+            tok.expires = timezone.now() + timezone.timedelta(minutes=30)
+            tok.save()
+            res = HttpResponse(status=200)
+        return res
 
 
 class NewUserView(View):
