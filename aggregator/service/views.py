@@ -8,9 +8,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-this_service_address = 'http://127.0.0.1:8000'
-
-user_service_address = 'http://127.0.0.1:8010'
+from .service_methods import GetUserInfo, GetUserQuestInfo, PostUserQuest, GetPlaceInfo, PostNewQuest
 
 client_id = 'we3iHS6Z8cfj7CDypvBLhNDtQHrsgjS1HSw5CGFm'
 client_secret = 'KyIeQtuXyN2Vc4VMSTAXzuoNebNnk6UAWkcekE5P9wscnPM2EAa0TyZxSZDWc6PH6A179t3fDNXdICLUsBooXF4gmmRqWjixf6pvy3imF6bz3GuEHj9sXDKnjHMrOb8S'
@@ -20,30 +18,18 @@ class UiUserInfoView(View):
     # Get info about user, including his quests list
     def get(self, request, *args, **kwargs):
         user_login = kwargs.get('user_login')
-        page = request.GET.get('page', 1)
 
         data = {
             'username': user_login,
-            'token': request.COOKIES['uid_token']
+            'token': request.COOKIES.get('uid_token', '')
         }
         res = requests.post('http://localhost:8010/user/token_check/', data=data)
         if res.status_code == 401:
             return HttpResponseRedirect(reverse('service:index'))
 
-        res = requests.get(this_service_address + '/api/user/{}/?page={}'.format(user_login, page),
-                           cookies=request.COOKIES)
-        if res.status_code == 401:
-            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
-            if res.status_code != 200:
-                return HttpResponseRedirect('http://127.0.0.1:8000/')
-            request.COOKIES['access_token'] = res.cookies.get('access_token')
-            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
-            res = requests.get(this_service_address + '/api/user/{}/?page={}'.format(user_login, page),
-                               cookies=request.COOKIES)
-            if res.status_code == 401:
-                return HttpResponseRedirect('http://127.0.0.1:8000/')
+        res = GetUserInfo(request, user_login)
 
-        data = res.json()
+        data = json.loads(res.content.decode())
 
         if res.status_code == 200:
             result = render(request, 'service/userinfo.html', data)
@@ -56,9 +42,6 @@ class UiUserInfoView(View):
         else:
             result = res
 
-        result.set_cookie('access_token', request.COOKIES['access_token'])
-        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
-
         return result
 
 
@@ -70,26 +53,16 @@ class UiUserQuestView(View):
 
         data = {
             'username': user_login,
-            'token': request.COOKIES['uid_token']
+            'token': request.COOKIES.get('uid_token', '')
         }
         res = requests.post('http://localhost:8010/user/token_check/', data=data)
         if res.status_code == 401:
             return HttpResponseRedirect(reverse('service:index'))
 
-        res = requests.get(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
-                           cookies=request.COOKIES)
-        if res.status_code == 401:
-            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
-            if res.status_code != 200:
-                return HttpResponseRedirect('http://127.0.0.1:8000/')
-            request.COOKIES['access_token'] = res.cookies.get('access_token')
-            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
-            res = requests.get(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
-                               cookies=request.COOKIES)
-            if res.status_code == 401:
-                return HttpResponseRedirect('http://127.0.0.1:8000/')
+        res = GetUserQuestInfo(quest_id, user_login)
 
-        data = res.json()
+        data = json.loads(res.content.decode())
+
         if res.status_code == 200:
             result = render(request, 'service/questinfo.html', data)
         elif res.status_code == 404:
@@ -98,9 +71,6 @@ class UiUserQuestView(View):
             result = render(request, 'service/503.html', data)
         else:
             result = res
-
-        result.set_cookie('access_token', request.COOKIES['access_token'])
-        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
 
         return result
 
@@ -112,28 +82,16 @@ class UiUserQuestView(View):
 
         data = {
             'username': user_login,
-            'token': request.COOKIES['uid_token']
+            'token': request.COOKIES.get('uid_token', '')
         }
         res = requests.post('http://localhost:8010/user/token_check/', data=data)
         if res.status_code == 401:
             return HttpResponseRedirect(reverse('service:index'))
 
-        res = requests.post(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
-                            data={'answer': answer},
-                            cookies=request.COOKIES)
-        if res.status_code == 401:
-            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
-            if res.status_code != 200:
-                return HttpResponseRedirect('http://127.0.0.1:8000/')
-            request.COOKIES['access_token'] = res.cookies.get('access_token')
-            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
-            res = requests.post(this_service_address + '/api/user/{}/quest/{}/'.format(user_login, quest_id),
-                                data={'answer': answer},
-                                cookies=request.COOKIES)
-            if res.status_code == 401:
-                return HttpResponseRedirect('http://127.0.0.1:8000/')
+        res = PostUserQuest(quest_id, request, user_login)
 
-        data = res.json()
+        data = json.loads(res.content.decode())
+
         if res.status_code == 200:
             result = render(request, 'service/questinfo.html', data)
         elif res.status_code == 404:
@@ -142,9 +100,6 @@ class UiUserQuestView(View):
             result = render(request, 'service/503.html', data)
         else:
             result = res
-
-        result.set_cookie('access_token', request.COOKIES['access_token'])
-        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
 
         return result
 
@@ -159,25 +114,16 @@ class UiPlaceInfoView(View):
 
         data = {
             'username': user_login,
-            'token': request.COOKIES['uid_token']
+            'token': request.COOKIES.get('uid_token', '')
         }
         res = requests.post('http://localhost:8010/user/token_check/', data=data)
         if res.status_code == 401:
             return HttpResponseRedirect(reverse('service:index'))
 
-        res = requests.get(this_service_address + '/api/user/{}/quest/{}/place/{}/fact/{}/'.format(
-            user_login, quest_id, place_id, fact_id), cookies=request.COOKIES)
-        if res.status_code == 401:
-            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
-            if res.status_code != 200:
-                return HttpResponseRedirect('http://127.0.0.1:8000/')
-            request.COOKIES['access_token'] = res.cookies.get('access_token')
-            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
-            res = requests.get(this_service_address + '/api/user/{}/quest/{}/place/{}/fact/{}/'.format(
-                user_login, quest_id, place_id, fact_id), cookies=request.COOKIES)
-            if res.status_code == 401:
-                return HttpResponseRedirect('http://127.0.0.1:8000/')
-        data = res.json()
+        res = GetPlaceInfo(fact_id, place_id, quest_id, user_login)
+
+        data = json.loads(res.content.decode())
+
         if res.status_code == 200:
             result = render(request, 'service/placefact.html', data)
         elif res.status_code == 404:
@@ -186,9 +132,6 @@ class UiPlaceInfoView(View):
             result = render(request, 'service/503.html', data)
         else:
             result = res
-
-        result.set_cookie('access_token', request.COOKIES['access_token'])
-        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
 
         return result
 
@@ -200,37 +143,24 @@ class UiNewQuestView(View):
 
         data = {
             'username': user_login,
-            'token': request.COOKIES['uid_token']
+            'token': request.COOKIES.get('uid_token', '')
         }
         res = requests.post('http://localhost:8010/user/token_check/', data=data)
         if res.status_code == 401:
             return HttpResponseRedirect(reverse('service:index'))
 
-        res = requests.post(this_service_address + '/api/user/{}/quest/'.format(user_login),
-                            cookies=request.COOKIES)
-        if res.status_code == 401:
-            res = requests.get('http://127.0.0.1:8000/refresh/', cookies=request.COOKIES)
-            if res.status_code != 200:
-                return HttpResponseRedirect('http://127.0.0.1:8000/')
-            request.COOKIES['access_token'] = res.cookies.get('access_token')
-            request.COOKIES['refresh_token'] = res.cookies.get('refresh_token')
-            res = requests.post(this_service_address + '/api/user/{}/quest/'.format(user_login),
-                                cookies=request.COOKIES)
-        if res.status_code == 401:
-            result = HttpResponseRedirect('http://127.0.0.1:8000/')
+        res = PostNewQuest(user_login)
+
         if res.status_code == 201:
             result = redirect('service:user', user_login)
         elif res.status_code == 404:
-            data = res.json()
+            data = json.loads(res.content.decode())
             result = render(request, 'service/404.html', data)
         elif res.status_code == 503:
-            data = res.json()
+            data = json.loads(res.content.decode())
             result = render(request, 'service/503.html', data)
         else:
             result = res
-
-        result.set_cookie('access_token', request.COOKIES['access_token'])
-        result.set_cookie('refresh_token', request.COOKIES['refresh_token'])
 
         return result
 
@@ -263,7 +193,7 @@ class UiLoginView(View):
         if res.status_code == 403:
             return render(request, 'service/login.html', {'error': 'Неверный логин или пароль'})
         else:
-            resp = render(request, 'service/login_ok.html')
+            resp = render(request, 'service/login_ok.html', {'username': data['username']})
             resp.set_cookie('uid_token', res.json()['token'])
             return resp
 
@@ -271,14 +201,19 @@ class UiLoginView(View):
 class ApiLoginView(View):
     def get(self, request, *args, **kwargs):
         # return render(request, 'service/login.html')
-        return HttpResponseRedirect('http://localhost:8010/o/authorize/?response_type=code&'
-                                    'client_id={}&redirect_uri=http://localhost:8000/oauth/'.format(
-                                        client_id))
-
-    def post(self, request, *args, **kwargs):
+        # return HttpResponseRedirect('http://localhost:8010/o/authorize/?response_type=code&'
+        #                             'client_id={}&redirect_uri=http://localhost:8000/oauth/'.format(
+        #                                 client_id))
+        # return HttpResponseRedirect(reverse('service:user'))
         pass
 
+    def post(self, request, *args, **kwargs):
+        # username = request.COOKIES.get('username')
+        username = request.POST['login']
+        return HttpResponseRedirect(reverse('service:user', args=[username]))
 
+
+'''
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthView(View):
     def get(self, request, *args, **kwargs):
@@ -322,3 +257,4 @@ class RefreshView(View):
         res1.set_cookie('refresh_token', res.json()['refresh_token'])
 
         return res1
+'''
